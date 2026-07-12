@@ -4,9 +4,9 @@ Ejemplo 05 - Agente con Semantic Kernel
 Muestra como usar Microsoft Semantic Kernel (SK) como alternativa /
 complemento a AutoGen para construir agentes con herramientas (plugins).
 
-Que es Semantic Kernel?
+¿Qué es Semantic Kernel?
 -------------------------
-Semantic Kernel es el SDK de orquestacion de IA de Microsoft.  Permite:
+Semantic Kernel es el SDK de orquestación de IA de Microsoft.  Permite:
   * Definir "plugins" (funciones Python decoradas con @kernel_function).
   * Encadenar llamadas al LLM con logica de negocio propia.
   * Conectar a OpenAI, Azure OpenAI y modelos Hugging Face.
