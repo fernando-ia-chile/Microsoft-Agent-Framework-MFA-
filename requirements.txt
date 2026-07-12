@@ -1,0 +1,16 @@
+# ─────────────────────────────────────────────
+# Microsoft Agent Framework – Python dependencies
+# ─────────────────────────────────────────────
+
+# AutoGen: Microsoft's multi-agent conversation framework (0.7.x API)
+pyautogen>=0.10.0
+autogen-ext[openai]>=0.7.5
+
+# Semantic Kernel: Microsoft's AI orchestration SDK
+semantic-kernel>=1.3.0
+
+# Environment variable management
+python-dotenv>=1.0.1
+
+# Utilities used in examples
+tenacity>=8.3.0      # retry logic (best-practices example)
