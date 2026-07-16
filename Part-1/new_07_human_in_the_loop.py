@@ -1,290 +1,201 @@
 """
-NEW 07: Human-in-the-Loop Approval (Interactive Demo)
+NUEVO 07: Human-in-the-Loop / Aprobación humana (Demo interactiva)
 
-Simple real example with 2 functions:
-1. create_file() - No approval needed (safe operation)
-2. delete_file() - Requires approval (dangerous operation)
+Dos funciones:
+  1. create_file()  - NO requiere aprobación (operación segura)
+  2. delete_file()  - REQUIERE aprobación (operación peligrosa)
 
-This uses a custom ApprovalRequiredTool wrapper (same pattern as file 11)
+--- Migrado a la API actual del Microsoft Agent Framework (core 1.11.0) ---
+El tutorial original implementaba un wrapper CASERO (`ApprovalRequiredTool`) con
+lógica de desanidado de argumentos y prints [DEBUG], porque la API beta NO tenía
+aprobación nativa. Eso YA NO es necesario: MFA trae aprobación humana nativa.
+
+  * Wrapper ApprovalRequiredTool(...)          -> @tool(approval_mode="always_require")
+  * intercepción manual + callback de input()  -> result.user_input_requests
+  * ejecutar/rechazar a mano                   -> req.to_function_approval_response(True/False)
+  * AzureOpenAIChatClient(...)                 -> OpenAIChatClient (nativo-Azure)
+
+Cómo funciona el mecanismo nativo:
+  - Una tool marcada con approval_mode="always_require" NO se ejecuta sola.
+  - En su lugar, agent.run() devuelve `result.user_input_requests` (solicitudes de
+    aprobación). Cada una trae `.function_call` (nombre + argumentos).
+  - Se responde con `req.to_function_approval_response(aprobado)` y se vuelve a
+    llamar a run() con el contexto para que el agente continúe.
+
+Requisitos:
+  1. .env03 con AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_CHAT_DEPLOYMENT_NAME,
+     AZURE_OPENAI_API_KEY y AZURE_OPENAI_API_VERSION.
 """
 
 import asyncio
+import json
 import os
-from typing import Annotated, Callable
+from pathlib import Path
+from typing import Annotated
 from pydantic import Field
 from dotenv import load_dotenv
-from pathlib import Path
 
-from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework import Agent, tool, Message
+from agent_framework.openai import OpenAIChatClient
 
-# Load environment variables
-load_dotenv('.env03')
+# Cargar variables de entorno (el archivo manda sobre $env: viejos de la sesión).
+load_dotenv('.env03', override=True)
 
-# Configuration
 ENDPOINT = os.getenv('AZURE_OPENAI_ENDPOINT')
 DEPLOYMENT = os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT_NAME')
 API_KEY = os.getenv('AZURE_OPENAI_API_KEY')
-API_VERSION = os.getenv('AZURE_OPENAI_API_VERSION')
+API_VERSION = os.getenv('AZURE_OPENAI_API_VERSION', 'preview')
 
-# Create demo directory for file operations
+# Directorio donde se crean/borran los archivos de la demo.
 DEMO_DIR = Path(__file__).parent / "demo_files"
 DEMO_DIR.mkdir(exist_ok=True)
 
 
 # ============================================================================
-# Approval System: Wrapper for functions requiring human approval
+# Herramientas
 # ============================================================================
 
-class ApprovalRequiredTool:
-    """Wrapper for a function tool that requires human approval before execution."""
-    
-    def __init__(self, func: Callable, description: str = None):
-        self.original_func = func
-        self.func_name = func.__name__
-        self.description = description or func.__doc__ or "No description"
-        self.approval_callback = None
-    
-    def set_approval_callback(self, callback: Callable):
-        """Set the callback function that asks user for approval."""
-        self.approval_callback = callback
-    
-    def __call__(self, *args, **kwargs):
-        """Execute the function with approval check."""
-        # Debug: show what we received
-        print(f"[DEBUG] Wrapper called with args={args}, kwargs={kwargs}")
-        
-        # Handle nested argument structure from agent framework
-        # The framework may pass: kwargs={'args': 'value', 'kwargs': '{}'}
-        if 'args' in kwargs and 'kwargs' in kwargs:
-            # Unwrap nested structure
-            nested_args = kwargs.get('args', '')
-            nested_kwargs_str = kwargs.get('kwargs', '{}')
-            
-            print(f"[DEBUG] Detected nested structure - unwrapping...")
-            print(f"[DEBUG] nested_args={nested_args}, nested_kwargs={nested_kwargs_str}")
-            
-            # Convert nested_kwargs string to dict if needed
-            import json
-            if isinstance(nested_kwargs_str, str) and nested_kwargs_str:
-                try:
-                    nested_kwargs = json.loads(nested_kwargs_str) if nested_kwargs_str.strip() else {}
-                except:
-                    nested_kwargs = {}
-            else:
-                nested_kwargs = nested_kwargs_str if isinstance(nested_kwargs_str, dict) else {}
-            
-            # Map 'args' to the actual parameter name
-            # For delete_file_impl, the parameter is 'filename'
-            import inspect
-            sig = inspect.signature(self.original_func)
-            param_names = list(sig.parameters.keys())
-            
-            if param_names and nested_args:
-                # Use the first parameter name
-                actual_kwargs = {param_names[0]: nested_args}
-                actual_kwargs.update(nested_kwargs)
-            else:
-                actual_kwargs = nested_kwargs
-            
-            print(f"[DEBUG] Unwrapped to: {actual_kwargs}")
-            
-            # Prepare approval request info
-            approval_info = {
-                "function_name": self.func_name,
-                "description": self.description,
-                "arguments": {
-                    "args": (),
-                    "kwargs": actual_kwargs
-                }
-            }
-        else:
-            # Normal call - no unwrapping needed
-            actual_kwargs = kwargs
-            approval_info = {
-                "function_name": self.func_name,
-                "description": self.description,
-                "arguments": {
-                    "args": args,
-                    "kwargs": kwargs
-                }
-            }
-        
-        # Ask for approval
-        if self.approval_callback:
-            approved = self.approval_callback(approval_info)
-        else:
-            # Default: auto-approve if no callback set
-            print(f"⚠️ No approval callback set, auto-approving: {self.func_name}")
-            approved = True
-        
-        if approved:
-            print(f"✅ APPROVED: Executing {self.func_name}")
-            try:
-                if 'args' in kwargs and 'kwargs' in kwargs:
-                    # Use unwrapped arguments
-                    result = self.original_func(**actual_kwargs)
-                else:
-                    # Use original arguments
-                    result = self.original_func(*args, **kwargs)
-                print(f"[DEBUG] Function returned: {result}")
-                return result
-            except Exception as e:
-                import traceback
-                error_msg = f"❌ Error executing {self.func_name}: {e}"
-                print(f"[DEBUG] {error_msg}")
-                print(f"[DEBUG] Traceback: {traceback.format_exc()}")
-                return error_msg
-        else:
-            print(f"❌ REJECTED: Not executing {self.func_name}")
-            return f"⛔ Function '{self.func_name}' was rejected by the user."
-
-
-# ============================================================================
-# Function 1: CREATE FILE - No approval needed (safe operation)
-# ============================================================================
-
+@tool  # Operación segura: se ejecuta directamente, sin aprobación.
 def create_file(
-    filename: Annotated[str, Field(description="Name of file to create")],
-    content: Annotated[str, Field(description="Content to write in file")]
+    filename: Annotated[str, Field(description="Nombre del archivo a crear")],
+    content: Annotated[str, Field(description="Contenido a escribir en el archivo")],
 ) -> str:
-    """Create a new file with content. Safe operation - no approval needed."""
+    """Crea un archivo nuevo con contenido."""
     try:
-        file_path = DEMO_DIR / filename
-        file_path.write_text(content, encoding='utf-8')
-        return f"✅ File '{filename}' created successfully with {len(content)} characters"
+        (DEMO_DIR / filename).write_text(content, encoding='utf-8')
+        return f"✅ Archivo '{filename}' creado con {len(content)} caracteres"
     except Exception as e:
-        return f"❌ Error creating file: {e}"
+        return f"❌ Error creando el archivo: {e}"
 
 
-# ============================================================================
-# Function 2: DELETE FILE - Implementation (requires approval via wrapper)
-# ============================================================================
-
-def delete_file_impl(
-    filename: Annotated[str, Field(description="Name of file to delete")]
+@tool(approval_mode="always_require")  # Operación peligrosa: EXIGE aprobación humana.
+def delete_file(
+    filename: Annotated[str, Field(description="Nombre del archivo a borrar")],
 ) -> str:
-    """Delete a file. This function will be wrapped with approval requirement."""
+    """Borra un archivo del directorio de la demo."""
     try:
-        # Debug: show what we received
-        print(f"[DEBUG] delete_file_impl called with filename='{filename}' (type: {type(filename)})")
-        
-        file_path = DEMO_DIR / filename
-        print(f"[DEBUG] File path: {file_path}")
-        print(f"[DEBUG] File exists: {file_path.exists()}")
-        
-        if file_path.exists():
-            file_path.unlink()
-            return f"🗑️ File '{filename}' deleted successfully"
-        else:
-            return f"⚠️ File '{filename}' not found in {DEMO_DIR}"
+        path = DEMO_DIR / filename
+        if path.exists():
+            path.unlink()
+            return f"🗑️ Archivo '{filename}' borrado correctamente"
+        return f"⚠️ Archivo '{filename}' no encontrado en {DEMO_DIR}"
     except Exception as e:
-        import traceback
-        print(f"[DEBUG] Exception: {e}")
-        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
-        return f"❌ Error deleting file: {e}"
+        return f"❌ Error borrando el archivo: {e}"
 
 
 # ============================================================================
-# Approval Callback
+# Aprobación humana (usa el mecanismo NATIVO de MFA)
 # ============================================================================
 
-def ask_user_approval(approval_info: dict) -> bool:
-    """Ask the user to approve or reject a function call."""
-    print("\n" + "="*70)
-    print("🚨 APPROVAL REQUIRED")
-    print("="*70)
-    print(f"📝 Function: {approval_info['function_name']}")
-    print(f"📊 Arguments:")
-    
-    args = approval_info['arguments']
-    if args['args']:
-        for i, arg in enumerate(args['args']):
-            print(f"   - Arg {i+1}: {arg}")
-    if args['kwargs']:
-        for key, value in args['kwargs'].items():
-            print(f"   - {key}: {value}")
-    
+def _formatear_args(function_call) -> str:
+    """Muestra los argumentos de la llamada, vengan como dict o como JSON string."""
+    args = function_call.arguments
+    if isinstance(args, str):
+        try:
+            args = json.loads(args) if args.strip() else {}
+        except Exception:
+            return args
+    if isinstance(args, dict):
+        return ", ".join(f"{k}={v!r}" for k, v in args.items())
+    return str(args)
+
+
+def pedir_aprobacion(function_call) -> bool:
+    """Pregunta al usuario si aprueba la ejecución de la función."""
+    print("\n" + "=" * 70)
+    print("🚨 SE REQUIERE APROBACIÓN")
+    print("=" * 70)
+    print(f"📝 Función: {function_call.name}")
+    print(f"📊 Argumentos: {_formatear_args(function_call)}")
     print("-" * 70)
-    
     while True:
-        response = input("⚠️ Do you want to APPROVE this action? (yes/no): ").strip().lower()
-        if response in ['yes', 'y']:
+        r = input("⚠️ ¿Apruebas esta acción? (sí/no): ").strip().lower()
+        if r in ("si", "sí", "s", "yes", "y"):
             return True
-        elif response in ['no', 'n']:
+        if r in ("no", "n"):
             return False
-        else:
-            print("   Please enter 'yes' or 'no'")
+        print("   Responde 'sí' o 'no'.")
+
+
+async def ejecutar_con_aprobaciones(agent, consulta: str) -> str:
+    """
+    Ejecuta el agente resolviendo en bucle las solicitudes de aprobación.
+    Se usa run() sin streaming porque necesitamos inspeccionar
+    result.user_input_requests (la lista de aprobaciones pendientes).
+    """
+    entrada = consulta
+    while True:
+        result = await agent.run(entrada)
+
+        # Sin solicitudes pendientes -> ya hay respuesta final.
+        if not result.user_input_requests:
+            return result.text
+
+        # Reconstruir el contexto: la consulta original + por cada solicitud, el
+        # mensaje del asistente (la petición) y el del usuario (la respuesta).
+        entrada = [consulta]
+        for req in result.user_input_requests:
+            if req.function_call is None:
+                continue
+            aprobado = pedir_aprobacion(req.function_call)
+            print("✅ APROBADO" if aprobado else "❌ RECHAZADO")
+            entrada.append(Message(role="assistant", contents=[req]))
+            entrada.append(Message(role="user", contents=[req.to_function_approval_response(aprobado)]))
 
 
 # ============================================================================
-# Main Demo
+# Demo principal
 # ============================================================================
 
 async def main():
-    """Run the Human-in-the-Loop demo."""
-    
-    print("\n" + "="*70)
-    print("🔒 DEMO: Human-in-the-Loop - Create vs Delete")
-    print("="*70)
-    print("\n📋 This demo has 2 functions:")
-    print("   ✅ create_file() - Runs immediately (no approval)")
-    print("   🔒 delete_file() - Requires your approval first")
-    
-    # Wrap delete_file with approval requirement
-    delete_file_approval = ApprovalRequiredTool(delete_file_impl, "Delete a file from the system")
-    delete_file_approval.set_approval_callback(ask_user_approval)
-    
-    # Create agent with both functions
-    # create_file runs immediately, delete_file asks for approval
-    agent = AzureOpenAIChatClient(
-        endpoint=ENDPOINT,
-        deployment_name=DEPLOYMENT,
+    """Ejecuta la demo de human-in-the-loop."""
+    print("\n" + "=" * 70)
+    print("🔒 DEMO: Human-in-the-Loop - Crear vs Borrar")
+    print("=" * 70)
+    print("\n📋 Esta demo tiene 2 funciones:")
+    print("   ✅ create_file() - Se ejecuta de inmediato (sin aprobación)")
+    print("   🔒 delete_file() - Pide tu aprobación primero")
+
+    chat_client = OpenAIChatClient(
+        model=DEPLOYMENT,
+        azure_endpoint=ENDPOINT,
         api_key=API_KEY,
-        api_version=API_VERSION
-    ).create_agent(
-        instructions="""You are a file management assistant with access to file operations.
-
-IMPORTANT: You MUST call the functions directly. Do NOT ask the user for permission in chat.
-
-Rules:
-1. When user asks to create a file: IMMEDIATELY call create_file() function
-2. When user asks to delete a file: IMMEDIATELY call delete_file_impl() function
-3. Do NOT ask for confirmation in the chat - the system will handle approvals automatically
-4. Just call the function and report the result""",
-        name="FileBot",
-        tools=[create_file, delete_file_approval]
+        api_version=API_VERSION,
     )
-    
-    print(f"\n✅ Agent created with 2 functions")
-    print(f"📁 Files will be created in: {DEMO_DIR.absolute()}/")
-    
-    print("\n" + "="*70)
-    print("💬 Interactive Chat (Type 'quit' to exit)")
-    print("="*70)
-    print("\n💡 Try these commands:")
-    print("   • Create a file named test.txt with some content")
-    print("   • Delete test.txt")
-    print("   • Create file notes.txt saying 'Hello World'")
-    print("   • Delete notes.txt")
-    
-    # Chat loop
+
+    # El agente recibe ambas tools; MFA aplica la aprobación según approval_mode.
+    agent = Agent(
+        chat_client,
+        instructions=(
+            "Eres un asistente de gestión de archivos. Cuando el usuario pida crear "
+            "un archivo, llama a create_file(); cuando pida borrar, llama a delete_file(). "
+            "No pidas confirmación en el chat: el sistema gestiona las aprobaciones."
+        ),
+        name="FileBot",
+        tools=[create_file, delete_file],
+    )
+
+    print(f"\n✅ Agente creado. Los archivos se guardan en: {DEMO_DIR.absolute()}/")
+    print("\n💡 Prueba:")
+    print("   • Crea un archivo llamado test.txt con algún contenido")
+    print("   • Borra test.txt")
+
+    print("\n" + "=" * 70)
+    print("💬 Chat interactivo (escribe 'quit' para salir)")
+    print("=" * 70)
+
     while True:
-        user_input = input("\nYou: ").strip()
-        
-        if user_input.lower() in ['quit', 'exit', 'bye']:
-            print("\n👋 Goodbye!")
+        user_input = input("\nTú: ").strip()
+
+        if user_input.lower() in ['quit', 'exit', 'q']:
+            print("\n👋 ¡Hasta luego!")
             break
-        
+
         if not user_input:
             continue
-        
-        print("Agent: ", end="", flush=True)
-        
-        # Stream the response
-        async for chunk in agent.run_stream(user_input):
-            print(chunk, end="", flush=True)
-        
-        print()  # New line after response
+
+        respuesta = await ejecutar_con_aprobaciones(agent, user_input)
+        print(f"Agente: {respuesta}")
 
 
 if __name__ == "__main__":

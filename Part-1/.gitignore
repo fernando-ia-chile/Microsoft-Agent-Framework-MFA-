@@ -1,0 +1,17 @@
+# Ignorar todos los archivos Markdown
+CLAUDE.md
+env.md
+Memory.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales
+venv/
+.env/
+
+# Archivos de IDE
+.vscode/
+.idea/

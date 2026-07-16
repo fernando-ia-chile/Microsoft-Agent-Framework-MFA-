@@ -1,7 +1,9 @@
-AZURE_OPENAI_ENDPOINT=xxxxx
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4o
+AZURE_OPENAI_ENDPOINT=
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-5.4-mini
 
-AZURE_OPENAI_API_KEY=xxxxx
+AZURE_OPENAI_API_KEY=
 
-AZURE_OPENAI_API_VERSION=2025-01-01-preview
-
+# "preview" = alias rolling de Azure que siempre apunta a la ÚLTIMA preview
+# (es el valor por defecto que usa el propio Agent Framework para la Responses API).
+# Puedes fijar una fecha concreta (p. ej. 2025-01-01-preview) si lo necesitas.
+AZURE_OPENAI_API_VERSION=preview

@@ -1,2 +1,4 @@
-AZURE_AI_PROJECT_ENDPOINT=xxxxx
-AZURE_AI_AGENT_ID=xxxxxx
+AZURE_AI_PROJECT_ENDPOINT=
+AZURE_AI_AGENT_NAME=
+# Opcional: fija una versión concreta del agente. Si se omite, se usa la última.
+# AZURE_AI_AGENT_VERSION=1

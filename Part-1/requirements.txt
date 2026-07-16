@@ -1,8 +1,27 @@
-# Requirements for Microsoft Agent Framework Lab
+# Requirements para el laboratorio de Microsoft Agent Framework — Part 1
+#
+# NOTA DE VERSIONES (2026-07-14):
+# El tutorial original se escribió para una API beta antigua (ChatAgent, run_stream,
+# AzureAIAgentClient). Se migró el codigo a la API estable actual (core 1.11.0).
+# Se fijan versiones para reproducibilidad. Evitamos el paquete `agent-framework`
+# (meta) porque arrastra `agent-framework-azure-ai` (rc6) que es INCOMPATIBLE con
+# core 1.11.0. En su lugar instalamos los subpaquetes concretos que usa el codigo.
 
-# Core packages
-agent-framework
-azure-identity>=1.15.0
+# Núcleo del framework (provee agent_framework.Agent)
+agent-framework-core==1.11.0
 
-# Optional but recommended
-python-dotenv>=1.0.0  # For .env file support
+# Conector de Azure AI Foundry (FoundryChatClient, FoundryAgent, to_prompt_agent)
+agent-framework-foundry==1.10.1
+
+# Conector de Azure OpenAI / OpenAI (para las demos de chat directo)
+agent-framework-openai==1.10.1
+
+# SDK de Azure AI Projects (crear/publicar agentes persistentes en Foundry)
+azure-ai-projects==2.3.0
+
+# Autenticación de Azure (AzureCliCredential -> requiere `az login`)
+azure-identity>=1.25.0
+
+# Utilidades
+python-dotenv>=1.0.0   # Soporte para archivos .env
+requests>=2.31.0       # Usado por new_06 (herramienta de zona horaria)
