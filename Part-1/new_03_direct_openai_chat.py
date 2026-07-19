@@ -21,6 +21,11 @@ Nota sobre la versión de API:
 Requisitos:
   1. .env03 con AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_CHAT_DEPLOYMENT_NAME,
      AZURE_OPENAI_API_KEY y AZURE_OPENAI_API_VERSION.
+
+Utilidad:
+    - Demostración de chat directo con Azure OpenAI (sin Agent Service).
+    - Ejemplo de agente efímero (no se guarda en la nube).
+
 """
 
 import asyncio

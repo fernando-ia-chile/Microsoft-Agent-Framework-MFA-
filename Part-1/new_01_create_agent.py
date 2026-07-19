@@ -5,6 +5,9 @@ Demo interactiva para crear un nuevo agente en Azure AI Foundry y chatear con é
 en tiempo real. El agente es PERSISTENTE: queda publicado como PromptAgent en el
 servicio de Azure AI Foundry.
 
+El flujo es: definir local → convertir → publicar → usar persistente.
+        línea   48             64          75              110
+
 --- Migrado a la API actual del Microsoft Agent Framework (core 1.11.0) ---
 El tutorial original usaba una API beta que ya no existe. Equivalencias:
   * ChatAgent                      -> Agent
@@ -68,7 +71,7 @@ async def main():
         ) as project_client:
 
             # create_version crea el agente si no existe (versión inicial) o
-            # agrega una versión nueva si ya existía.
+            # agrega una versión nueva si ya existía en MS Foundry.
             created = await project_client.agents.create_version(
                 agent_name=AGENT_NAME,
                 definition=definition,
@@ -90,6 +93,7 @@ async def main():
                 print("💬 Chat interactivo (escribe 'quit' para salir)")
                 print("="*70 + "\n")
 
+
                 while True:
                     user_input = input("Tú: ")
 
@@ -102,9 +106,12 @@ async def main():
 
                     # Respuesta en streaming (token a token)
                     print("Agente: ", end="", flush=True)
+                    # Pregunta al agente persistente (FoundryAgent) y recibe la respuesta en streaming.
                     async for chunk in agent.run(user_input, stream=True):
-                        if chunk.text:
-                            print(chunk.text, end="", flush=True)
+                        # chunk.text puede ser None si el chunk es solo metadata
+                        if chunk.text: 
+                            # Imprime el texto del chunk en la misma línea, sin salto de línea, y fuerza el flush para que se vea inmediatamente.
+                            print(chunk.text, end="", flush=True) 
                     print("\n")
 
 

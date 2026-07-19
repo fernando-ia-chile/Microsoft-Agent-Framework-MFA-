@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Agent Telemetry Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .timestamp {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .trace-container {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+        }
+        .trace-header {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .trace-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .trace-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .data-grid {
+            display: grid;
+            gap: 8px;
+        }
+        .data-row {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 15px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .data-key {
+            font-weight: 600;
+            color: #555;
+        }
+        .data-value {
+            color: #333;
+            word-break: break-word;
+        }
+        .conversation {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .role {
+            font-weight: bold;
+            color: #1976d2;
+            display: inline-block;
+            min-width: 80px;
+        }
+        .tool-call {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            border-left: 4px solid #ff9800;
+        }
+        .tool-result {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            border-left: 4px solid #4caf50;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .highlight {
+            background: #fff59d;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        .badge-success { background: #4caf50; color: white; }
+        .badge-info { background: #2196f3; color: white; }
+        .badge-warning { background: #ff9800; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Complete Agent Telemetry Report</h1>
+        <div class="timestamp">Generated: 2026-07-19 13:09:10</div>
+        
+        
+        <h2>📊 Summary Statistics</h2>
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-label">Total Operations</div>
+                <div class="stat-value">4</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Agent Invocations</div>
+                <div class="stat-value">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">AI Model Calls</div>
+                <div class="stat-value">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tool Executions</div>
+                <div class="stat-value">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Tokens</div>
+                <div class="stat-value">832</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Duration</div>
+                <div class="stat-value">5665ms</div>
+            </div>
+        </div>
+        
+        <h2>🔬 Detailed Traces (Everything Captured)</h2>
+            <div class="trace-container">
+                <div class="trace-header">
+                    <div class="trace-title">
+                        1. chat gpt-5.4-mini
+                        <span class="badge badge-success">UNSET</span>
+                        <span class="badge badge-info">2007.37ms</span>
+                    </div>
+                    <div class="trace-meta">
+                        <div>🆔 Trace: <code>cca3604b33e16250a90e5d04d6eb9439</code></div>
+                        <div>🔗 Span: <code>7631f5e0f8bb6644</code></div>
+                        <div>⏱️ Start: 2026-07-19T13:08:14.638852</div>
+                        <div>🏁 End: 2026-07-19T13:08:16.646223</div>
+                    </div>
+                </div>
+            
+        <div class="section">
+            <div class="section-title">📥 Input Messages</div>
+        
+                    <div class="conversation">
+                        <div class="message">
+                            <span class="role">USER:</span> cuanto es 100 más 80
+                        </div>
+                    </div>
+                    </div>
+        <div class="section">
+            <div class="section-title">📤 Output Messages</div>
+        
+                    <div class="tool-call">
+                        <strong>🔧 Llamada a tool:</strong> calculate<br>
+                        <strong>Argumentos:</strong> <code>{"expresion":"100 + 80"}</code><br>
+                        <strong>ID:</strong> <code>call_K1iqkZzFyv4j9WzLttOEmBPG</code>
+                    </div>
+                    </div>
+                <div class="section">
+                    <div class="section-title">💰 Token Usage</div>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <div class="data-key">Input Tokens</div>
+                            <div class="data-value"><span class="highlight">174</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Output Tokens</div>
+                            <div class="data-value"><span class="highlight">22</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Total</div>
+                            <div class="data-value"><span class="highlight">196</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">🤖 Model Information</div>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <div class="data-key">Model</div>
+                            <div class="data-value">gpt-5.4-mini-2026-03-17</div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Provider</div>
+                            <div class="data-value">azure.ai.openai</div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Response ID</div>
+                            <div class="data-value"><code>resp_0445caf969701a4f006a5d0481395881949c72cdd60e9c47e8</code></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Finish Reason</div>
+                            <div class="data-value">N/A</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 Additional Attributes</div>
+                    <div class="data-grid">
+                
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.system_instructions</div>
+                            <div class="data-value"><pre>[
+  {
+    "type": "text",
+    "content": "Eres un asistente \u00fatil. S\u00e9 conciso."
+  }
+]</pre></div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.choice.count</div>
+                            <div class="data-value">1</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.operation.name</div>
+                            <div class="data-value">chat</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">server.address</div>
+                            <div class="data-value">Unknown</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.model</div>
+                            <div class="data-value">gpt-5.4-mini</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.cache_read.input_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.reasoning.output_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                    </div>
+                </div>
+                </div>
+            <div class="trace-container">
+                <div class="trace-header">
+                    <div class="trace-title">
+                        2. execute_tool calculate
+                        <span class="badge badge-success">UNSET</span>
+                        <span class="badge badge-info">0.34ms</span>
+                    </div>
+                    <div class="trace-meta">
+                        <div>🆔 Trace: <code>cca3604b33e16250a90e5d04d6eb9439</code></div>
+                        <div>🔗 Span: <code>d677514299cb57f1</code></div>
+                        <div>⏱️ Start: 2026-07-19T13:08:16.646523</div>
+                        <div>🏁 End: 2026-07-19T13:08:16.646863</div>
+                    </div>
+                </div>
+            
+                <div class="section">
+                    <div class="section-title">🔧 Tool Execution</div>
+                    <div class="tool-call">
+                        <strong>Function:</strong> calculate<br>
+                        <strong>Arguments:</strong> <code>{'expresion': '100 + 80'}</code>
+                    </div>
+                    <div class="tool-result">
+                        <strong>Result:</strong> = 180
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 Additional Attributes</div>
+                    <div class="data-grid">
+                
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.operation.name</div>
+                            <div class="data-value">execute_tool</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.tool.call.id</div>
+                            <div class="data-value">call_K1iqkZzFyv4j9WzLttOEmBPG</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.tool.type</div>
+                            <div class="data-value">function</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.tool.description</div>
+                            <div class="data-value">Evalúa una expresión matemática.</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">agent_framework.function.invocation.duration</div>
+                            <div class="data-value">0.0002971000000115964</div>
+                        </div>
+                    
+                    </div>
+                </div>
+                </div>
+            <div class="trace-container">
+                <div class="trace-header">
+                    <div class="trace-title">
+                        3. chat gpt-5.4-mini
+                        <span class="badge badge-success">UNSET</span>
+                        <span class="badge badge-info">823.9ms</span>
+                    </div>
+                    <div class="trace-meta">
+                        <div>🆔 Trace: <code>cca3604b33e16250a90e5d04d6eb9439</code></div>
+                        <div>🔗 Span: <code>7df1e65a1623af9b</code></div>
+                        <div>⏱️ Start: 2026-07-19T13:08:16.647047</div>
+                        <div>🏁 End: 2026-07-19T13:08:17.470949</div>
+                    </div>
+                </div>
+            
+        <div class="section">
+            <div class="section-title">📥 Input Messages</div>
+        
+                    <div class="tool-call">
+                        <strong>↩️ Respuesta de la tool</strong><br>
+                        <strong>Resultado:</strong> <code>N/A</code><br>
+                        <strong>ID:</strong> <code>call_K1iqkZzFyv4j9WzLttOEmBPG</code>
+                    </div>
+                    </div>
+        <div class="section">
+            <div class="section-title">📤 Output Messages</div>
+        
+                    <div class="conversation">
+                        <div class="message">
+                            <span class="role">ASSISTANT:</span> 100 + 80 = 180
+                        </div>
+                    </div>
+                    </div>
+                <div class="section">
+                    <div class="section-title">💰 Token Usage</div>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <div class="data-key">Input Tokens</div>
+                            <div class="data-value"><span class="highlight">209</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Output Tokens</div>
+                            <div class="data-value"><span class="highlight">11</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Total</div>
+                            <div class="data-value"><span class="highlight">220</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">🤖 Model Information</div>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <div class="data-key">Model</div>
+                            <div class="data-value">gpt-5.4-mini-2026-03-17</div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Provider</div>
+                            <div class="data-value">azure.ai.openai</div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Response ID</div>
+                            <div class="data-value"><code>resp_0445caf969701a4f006a5d048221188194a409e2e3dc068344</code></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Finish Reason</div>
+                            <div class="data-value">N/A</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 Additional Attributes</div>
+                    <div class="data-grid">
+                
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.system_instructions</div>
+                            <div class="data-value"><pre>[
+  {
+    "type": "text",
+    "content": "Eres un asistente \u00fatil. S\u00e9 conciso."
+  }
+]</pre></div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.choice.count</div>
+                            <div class="data-value">1</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.operation.name</div>
+                            <div class="data-value">chat</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">server.address</div>
+                            <div class="data-value">Unknown</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.conversation.id</div>
+                            <div class="data-value">resp_0445caf969701a4f006a5d0481395881949c72cdd60e9c47e8</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.model</div>
+                            <div class="data-value">gpt-5.4-mini</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.cache_read.input_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.reasoning.output_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                    </div>
+                </div>
+                </div>
+            <div class="trace-container">
+                <div class="trace-header">
+                    <div class="trace-title">
+                        4. invoke_agent ObservabilityBot
+                        <span class="badge badge-success">UNSET</span>
+                        <span class="badge badge-info">2833.09ms</span>
+                    </div>
+                    <div class="trace-meta">
+                        <div>🆔 Trace: <code>cca3604b33e16250a90e5d04d6eb9439</code></div>
+                        <div>🔗 Span: <code>6b1399e00752afe6</code></div>
+                        <div>⏱️ Start: 2026-07-19T13:08:14.638271</div>
+                        <div>🏁 End: 2026-07-19T13:08:17.471366</div>
+                    </div>
+                </div>
+            
+        <div class="section">
+            <div class="section-title">📥 Input Messages</div>
+        
+                    <div class="conversation">
+                        <div class="message">
+                            <span class="role">USER:</span> cuanto es 100 más 80
+                        </div>
+                    </div>
+                    </div>
+        <div class="section">
+            <div class="section-title">📤 Output Messages</div>
+        
+                    <div class="tool-call">
+                        <strong>🔧 Llamada a tool:</strong> calculate<br>
+                        <strong>Argumentos:</strong> <code>{"expresion":"100 + 80"}</code><br>
+                        <strong>ID:</strong> <code>call_K1iqkZzFyv4j9WzLttOEmBPG</code>
+                    </div>
+                    
+                    <div class="tool-call">
+                        <strong>↩️ Respuesta de la tool</strong><br>
+                        <strong>Resultado:</strong> <code>N/A</code><br>
+                        <strong>ID:</strong> <code>call_K1iqkZzFyv4j9WzLttOEmBPG</code>
+                    </div>
+                    
+                    <div class="conversation">
+                        <div class="message">
+                            <span class="role">ASSISTANT:</span> 100 + 80 = 180
+                        </div>
+                    </div>
+                    </div>
+                <div class="section">
+                    <div class="section-title">💰 Token Usage</div>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <div class="data-key">Input Tokens</div>
+                            <div class="data-value"><span class="highlight">383</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Output Tokens</div>
+                            <div class="data-value"><span class="highlight">33</span></div>
+                        </div>
+                        <div class="data-row">
+                            <div class="data-key">Total</div>
+                            <div class="data-value"><span class="highlight">416</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 Additional Attributes</div>
+                    <div class="data-grid">
+                
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.system_instructions</div>
+                            <div class="data-value"><pre>[
+  {
+    "type": "text",
+    "content": "Eres un asistente \u00fatil. S\u00e9 conciso."
+  }
+]</pre></div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.choice.count</div>
+                            <div class="data-value">1</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.operation.name</div>
+                            <div class="data-value">invoke_agent</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.agent.id</div>
+                            <div class="data-value">eb4dd213-e408-47bc-9e4c-caa63aa5c0c2</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.agent.name</div>
+                            <div class="data-value">ObservabilityBot</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.request.model</div>
+                            <div class="data-value">gpt-5.4-mini</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.tool.definitions</div>
+                            <div class="data-value"><pre>[
+  {
+    "type": "function",
+    "name": "get_weather",
+    "description": "Consulta el clima de una ciudad.",
+    "parameters": {
+      "properties": {
+        "ciudad": {
+          "description": "Nombre de la ciudad, p. ej. 'Tokio'",
+          "title": "Ciudad",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ciudad"
+      ],
+      "title": "get_weather_input",
+      "type": "object"
+    }
+  },
+  {
+    "type": "function",
+    "name": "calculate",
+    "description": "Eval\u00faa una expresi\u00f3n matem\u00e1tica.",
+    "parameters": {
+      "properties": {
+        "expresion": {
+          "description": "Expresi\u00f3n matem\u00e1tica, p. ej. '50 * 50'",
+          "title": "Expresion",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expresion"
+      ],
+      "title": "calculate_input",
+      "type": "object"
+    }
+  },
+  {
+    "type": "function",
+    "name": "search",
+    "description": "Busca en una base de datos simulada.",
+    "parameters": {
+      "properties": {
+        "consulta": {
+          "description": "Qu\u00e9 buscar: 'usuarios' o 'productos'",
+          "title": "Consulta",
+          "type": "string"
+        }
+      },
+      "required": [
+        "consulta"
+      ],
+      "title": "search_input",
+      "type": "object"
+    }
+  }
+]</pre></div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.cache_read.input_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                        <div class="data-row">
+                            <div class="data-key">gen_ai.usage.reasoning.output_tokens</div>
+                            <div class="data-value">0</div>
+                        </div>
+                    
+                    </div>
+                </div>
+                </div>
+    </div>
+    
+    <script>
+        // Add syntax highlighting to JSON
+        document.querySelectorAll('pre').forEach(block => {
+            if (block.textContent.trim().startsWith('{') || block.textContent.trim().startsWith('[')) {
+                try {
+                    const json = JSON.parse(block.textContent);
+                    block.textContent = JSON.stringify(json, null, 2);
+                } catch(e) {}
+            }
+        });
+    </script>
+</body>
+</html>

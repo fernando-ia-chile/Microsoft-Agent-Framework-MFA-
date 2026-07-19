@@ -21,6 +21,10 @@ doc oficial de Microsoft Foundry) es:
 Requisitos:
   1. `az login`.
   2. .env01 con AZURE_AI_PROJECT_ENDPOINT, AZURE_AI_MODEL_DEPLOYMENT_NAME y VECTOR_STORE_ID.
+
+Utilidades:
+    - Sirve como ejemplo de cómo usar la herramienta de File Search en un agente.
+    
 """
 
 import asyncio

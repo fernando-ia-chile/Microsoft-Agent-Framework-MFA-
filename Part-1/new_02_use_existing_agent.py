@@ -34,7 +34,7 @@ PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
 AGENT_NAME = os.getenv("AZURE_AI_AGENT_NAME")
 AGENT_VERSION = os.getenv("AZURE_AI_AGENT_VERSION")  # opcional
 
-
+# Esta función resuelve la última versión publicada de un agente si no se especifica ninguna.
 async def resolve_latest_version(project_client, agent_name: str) -> str | None:
     """Devuelve la última versión publicada del agente (o None si no existe)."""
     async for version in project_client.agents.list_versions(
@@ -53,6 +53,7 @@ async def main():
 
     print(f"\n📋 Agente objetivo: {AGENT_NAME}")
 
+    # Resolver la versión del agente (fijada en .env02 o la última publicada)
     async with (
         AzureCliCredential() as credential,
         AIProjectClient(

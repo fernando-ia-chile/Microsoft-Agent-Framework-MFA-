@@ -1,0 +1,60 @@
+# Contexto y modo de trabajo — Microsoft Agent Framework, PARTE 2 (Python)
+
+Vamos a trabajar la **Parte 2** de una serie práctica del **Microsoft Agent Framework**
+(paquete Python `agent_framework`) sobre Azure. Es la continuación directa de la Parte 1,
+que ya migramos por completo. Quiero **exactamente la misma modalidad de trabajo** que usamos
+en la Parte 1.
+
+## Sobre la Parte 2
+Son demos interactivas de terminal, autónomas y ejecutables (`new_1N_*.py`):
+- new_11 — threading / sesiones
+- new_12 — memoria de largo plazo
+- new_13 — middleware
+- new_14 — observabilidad
+- new_15 — MCP interactivo
+El código fue escrito para una **API beta antigua** (2025) que ya no existe; el entorno usa la
+línea estable **core 1.11.0**. Hay que **modernizar demo por demo** manteniendo el objetivo.
+
+## Reglas de trabajo (idénticas a la Parte 1)
+1. **Idioma:** todo en español — comunicación, documentación y comentarios del código.
+2. **Bitácora:** mantén un `Memory.md` en esta carpeta como registro de evolución. Cada cambio:
+   `## AAAA-MM-DD — <archivo/componente>` con **Cambio / Motivo / Notas**, el más reciente arriba.
+   Registra ahí TODO cambio de código, de dependencias o decisión relevante.
+3. **CLAUDE.md:** crea/mantén un `CLAUDE.md` con el estado de migración (✅/⏳ por demo) y las
+   equivalencias de API. Al empezar, si no existen, crea `CLAUDE.md` y un `Memory.md` vacío.
+4. **Migración:** una demo a la vez, esperando mi confirmación para pasar a la siguiente.
+   Mantén el **objetivo pedagógico** de cada demo; usa **métodos modernos pero equivalentes**,
+   **siempre dentro del marco de MFA** (no salirse del framework).
+5. **Fundamenta, no adivines:** cuando la API no sea obvia, **consulta la documentación oficial
+   de Microsoft** (MCP de Microsoft Learn: `microsoft_docs_search` / `microsoft_code_sample_search`)
+   e inspecciona los paquetes instalados en el venv antes de escribir.
+6. **Reporta lo deprecado:** avísame qué componentes, por su evolución, quedaron en **preview**,
+   **experimentales** o **eliminados**, y cuál es su reemplazo vigente dentro de MFA.
+7. **Verifica cada cambio:** compila/importa el script (offline) y confírmame que quedó bien.
+   Deja claro qué falta por probar end-to-end (lo que requiera `az login` o credenciales las
+   pruebo yo).
+8. **Comenta lo importante:** comentarios breves y precisos en las partes clave del código.
+9. **Tablas comparativas:** cuando migres, muéstrame una tabla **viejo → nuevo (1.11.0)** de los
+   componentes/métodos que cambiaron (ese formato me gusta).
+10. **Dependencias:** si hay que instalar/actualizar, fíjalo en `requirements.txt` (versiones
+    pinneadas) y regístralo en `Memory.md` con una leyenda explicativa.
+
+## Datos técnicos ya confirmados en la Parte 1 (aplican aquí)
+- Equivalencias core 1.11.0: `ChatAgent`→`Agent`; `AzureAIAgentClient`→`FoundryChatClient`+`FoundryAgent`
+  (`from agent_framework.foundry import ...`); `AzureOpenAIChatClient`→`OpenAIChatClient`
+  (`from agent_framework.openai import ...`, nativo-Azure vía `azure_endpoint`);
+  `agent.run_stream(x)`→`agent.run(x, stream=True)`.
+- **Trampa de dependencias:** NO usar el meta-paquete `agent-framework` (arrastra
+  `agent-framework-azure-ai==1.0.0rc6`, incompatible con core 1.11.0). Instalar subpaquetes
+  concretos: `agent-framework-core`, `agent-framework-foundry`, `agent-framework-openai`, etc.
+- **Azure OpenAI:** `AZURE_OPENAI_ENDPOINT` debe ser solo la base (sin `/openai/...`; el framework
+  agrega `/openai/v1/`). Usar `api_version="preview"`. En PowerShell, `load_dotenv(..., override=True)`
+  para que el `.env` mande sobre variables `$env:` viejas de la sesión.
+- Aprobación humana nativa: `@tool(approval_mode="always_require")` + `result.user_input_requests`
+  + `req.to_function_approval_response(bool)`.
+
+## Primer paso
+1. Revisa esta carpeta y el `requirements.txt`/venv; dime versión de `agent_framework` instalada.
+2. Crea `CLAUDE.md` (con el estado de migración) y un `Memory.md` vacío con el formato de bitácora.
+3. Lístame las demos detectadas y su estado, y **espera mi confirmación** para migrar la primera.
+No empieces a migrar código hasta que yo lo indique.

@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-07-18T22:24:32.971878",
+  "message_number": 1,
+  "session_data": {
+    "type": "session",
+    "session_id": "8361621f-ad79-4a29-ae8a-e701964d76ee",
+    "service_session_id": "resp_0cb0e5718902c8cf006a5c355cb3248195a81fa8d0be959205",
+    "state": {
+      "in_memory": {
+        "messages": [
+          {
+            "type": "message",
+            "role": "user",
+            "contents": [
+              {
+                "type": "text",
+                "text": "eres un programador c# estás listo para responder consultas?",
+                "additional_properties": {}
+              }
+            ],
+            "additional_properties": {}
+          },
+          {
+            "type": "message",
+            "role": "assistant",
+            "contents": [
+              {
+                "type": "text",
+                "text": "Sí, listo.  \nPuedo ayudarte con C# y .NET: sintaxis, LINQ, async/await, ASP.NET, Entity Framework, patrones de diseño, depuración, arquitectura, pruebas y más.\n\nSi quieres, envíame tu primera consulta o código y lo revisamos.",
+                "additional_properties": {}
+              }
+            ],
+            "author_name": "MemoryBot",
+            "additional_properties": {}
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,31 +1,97 @@
+"""
+NUEVO 14: Observabilidad completa con OpenTelemetry (Demo interactiva)
+
+Objetivo pedagógico (sin cambios respecto del original):
+    Mostrar TODO lo que el Microsoft Agent Framework emite como telemetría:
+    conversación completa, respuestas del modelo, argumentos y resultados de cada
+    tool, consumo de tokens, modelo usado, IDs de traza y tiempos. Se captura con
+    un SpanExporter propio y al salir se genera un reporte HTML navegable.
+
+--- Migrado a la API actual del Microsoft Agent Framework (core 1.11.0) ---
+
+  * AzureOpenAIChatClient(...)      -> OpenAIChatClient(azure_endpoint=, model=, ...)
+  * client.create_agent(...)        -> Agent(client, instructions=, name=)
+  * agent.get_new_thread()          -> agent.create_session()
+  * agent.run_stream(x, thread=t)   -> agent.run(x, stream=True, session=s)
+  * setup_observability(...)        -> configure_otel_providers(...)
+
+La gran simplificación:
+    Antes había que montar OpenTelemetry a mano — crear el Resource, el
+    TracerProvider, un BatchSpanProcessor, registrarlo globalmente y recién ahí
+    llamar a setup_observability(). Eran 5 pasos:
+
+        resource = Resource.create({...})
+        tracer_provider = TracerProvider(resource=resource)
+        tracer_provider.add_span_processor(BatchSpanProcessor(collector))
+        trace.set_tracer_provider(tracer_provider)
+        setup_observability(enable_sensitive_data=True)
+
+    Ahora `configure_otel_providers()` hace todo eso en una sola llamada, y
+    acepta directamente nuestros exportadores personalizados.
+
+Sobre los datos capturados:
+    El framework emite atributos siguiendo las convenciones semánticas GenAI de
+    OpenTelemetry (`gen_ai.*`), así que el reporte funciona con cualquier
+    proveedor, no solo con Azure OpenAI. Los principales:
+      * gen_ai.operation.name  -> invoke_agent | chat | execute_tool
+      * gen_ai.input.messages / gen_ai.output.messages
+      * gen_ai.tool.name / .call.arguments / .call.result
+      * gen_ai.usage.input_tokens / .output_tokens
+      * gen_ai.request.model / .response.model / .provider.name
+
+Requisitos:
+  1. .env03 con AZURE_OPENAI_ENDPOINT (¡solo la base!), AZURE_OPENAI_CHAT_DEPLOYMENT_NAME,
+     AZURE_OPENAI_API_KEY y AZURE_OPENAI_API_VERSION.
+
+Utilidad:
+    - Depurar qué está haciendo el agente por dentro, paso a paso.
+    - Auditar consumo de tokens y latencia por operación.
+    - Base para enviar la misma telemetría a Azure Monitor o cualquier backend OTLP.
+
+Nota: `enable_sensitive_data=True` hace que la telemetría incluya el CONTENIDO de
+los mensajes. Es lo que da valor a esta demo, pero en producción hay que pensarlo
+dos veces: esos textos terminan en tu backend de observabilidad.
+"""
 
 import asyncio
 import os
 import json
+import webbrowser
 from datetime import datetime
 from pathlib import Path
-from dotenv import load_dotenv
-from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from typing import Annotated
 
-# OpenTelemetry imports
+from dotenv import load_dotenv
+from pydantic import Field
+
+from agent_framework import Agent
+from agent_framework.observability import configure_otel_providers
+from agent_framework.openai import OpenAIChatClient
+
+# De OpenTelemetry ya solo necesitamos la interfaz de exportador y el acceso al
+# provider global para forzar el vaciado; el montaje lo hace el framework.
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
-load_dotenv('.env03')
+# override=True: el .env03 manda sobre variables $env: viejas de la terminal.
+load_dotenv('.env03', override=True)
 
 ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
 API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-DEPLOYMENT = "gpt-4o"
-API_VERSION = "2024-10-21"
+API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "preview")
+
+REPORTE_HTML = "complete_telemetry_report.html"
 
 
 class CompleteTelemetryCollector(SpanExporter):
-    """Collects EVERYTHING from telemetry"""
-    
+    """Exportador propio: se queda con TODO lo que pasa por la telemetría.
+
+    Un SpanExporter es la interfaz estándar de OpenTelemetry. El framework le
+    entrega los spans ya terminados; aquí en vez de mandarlos a un backend los
+    guardamos en memoria para armar el reporte HTML al final.
+    """
+
     def __init__(self):
         self.all_data = []
     
@@ -70,7 +136,6 @@ class CompleteTelemetryCollector(SpanExporter):
 <html>
 <head>
     <title>Complete Agent Telemetry Report</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
@@ -237,12 +302,6 @@ class CompleteTelemetryCollector(SpanExporter):
         .badge-success {{ background: #4caf50; color: white; }}
         .badge-info {{ background: #2196f3; color: white; }}
         .badge-warning {{ background: #ff9800; color: white; }}
-        .chart-container {{
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }}
     </style>
 </head>
 <body>
@@ -474,12 +533,23 @@ class CompleteTelemetryCollector(SpanExporter):
                 elif part_type == 'tool_call':
                     html += f"""
                     <div class="tool-call">
-                        <strong>🔧 Tool Call:</strong> {part.get('name', 'N/A')}<br>
-                        <strong>Arguments:</strong> <code>{part.get('arguments', 'N/A')}</code><br>
+                        <strong>🔧 Llamada a tool:</strong> {part.get('name', 'N/A')}<br>
+                        <strong>Argumentos:</strong> <code>{part.get('arguments', 'N/A')}</code><br>
                         <strong>ID:</strong> <code>{part.get('id', 'N/A')}</code>
                     </div>
                     """
-        
+
+                elif part_type == 'tool_call_response':
+                    # Tipo de parte del formato actual: la respuesta que devolvió
+                    # la tool y que se le reenvía al modelo.
+                    html += f"""
+                    <div class="tool-call">
+                        <strong>↩️ Respuesta de la tool</strong><br>
+                        <strong>Resultado:</strong> <code>{part.get('result', 'N/A')}</code><br>
+                        <strong>ID:</strong> <code>{part.get('id', 'N/A')}</code>
+                    </div>
+                    """
+
         html += "</div>"
         return html
     
@@ -487,126 +557,150 @@ class CompleteTelemetryCollector(SpanExporter):
         pass
 
 
-# Tools
-def get_weather(city: str) -> str:
-    """Get weather for a city."""
-    return f"Weather in {city}: 22°C, Sunny"
+# ============================================================================
+# TOOLS DE LA DEMO
+# ============================================================================
+# Estilo Part-1: parámetros tipados con Annotated + Field(description=...).
+# Cada llamada a estas funciones genera su propio span 'execute_tool' con los
+# argumentos y el resultado, que es lo que hace visible el reporte.
+
+def get_weather(
+    ciudad: Annotated[str, Field(description="Nombre de la ciudad, p. ej. 'Tokio'")]
+) -> str:
+    """Consulta el clima de una ciudad."""
+    return f"Clima en {ciudad}: 22°C, soleado"
 
 
-def calculate(expression: str) -> str:
-    """Calculate a math expression."""
+def calculate(
+    expresion: Annotated[str, Field(description="Expresión matemática, p. ej. '50 * 50'")]
+) -> str:
+    """Evalúa una expresión matemática."""
     try:
-        result = eval(expression, {'__builtins__': {}}, {})
-        return f"= {result}"
-    except Exception as e:
-        return f"Error: {str(e)}"
+        # Evaluación acotada: sin builtins y con una lista blanca de funciones.
+        resultado = eval(
+            expresion,
+            {'__builtins__': {}},
+            {"abs": abs, "round": round, "min": min, "max": max, "sum": sum, "pow": pow},
+        )
+        return f"= {resultado}"
+    except Exception:
+        return f"Error: no se pudo calcular '{expresion}'"
 
 
-def search(query: str) -> str:
-    """Search a database."""
-    results = {"users": ["Alice", "Bob"], "products": ["Laptop", "Phone"]}
-    for category, items in results.items():
-        if query.lower() in category.lower():
-            return f"Found: {', '.join(items)}"
-    return f"No results for '{query}'"
+def search(
+    consulta: Annotated[str, Field(description="Qué buscar: 'usuarios' o 'productos'")]
+) -> str:
+    """Busca en una base de datos simulada."""
+    resultados = {"usuarios": ["Ana", "Bruno"], "productos": ["Laptop", "Teléfono"]}
+    for categoria, items in resultados.items():
+        if consulta.lower() in categoria.lower():
+            return f"Encontrado: {', '.join(items)}"
+    return f"Sin resultados para '{consulta}'"
 
 
 async def main():
-    print("\n" + "="*75)
-    print("COMPLETE OBSERVABILITY - EVERYTHING CAPTURED")
-    print("="*75)
+    print("\n" + "=" * 75)
+    print("🔭 OBSERVABILIDAD COMPLETA - TODO QUEDA CAPTURADO")
+    print("=" * 75)
     print("""
-This shows EVERY piece of data OpenTelemetry captures:
-✅ Full conversation history
-✅ All AI responses
-✅ Function arguments & results
-✅ Token usage details
-✅ Model information
-✅ Trace/Span IDs
-✅ Timestamps
-✅ And much more!
+Esta demo muestra CADA dato que OpenTelemetry captura del agente:
+✅ Historial completo de la conversación
+✅ Todas las respuestas del modelo
+✅ Argumentos y resultados de cada tool
+✅ Consumo de tokens
+✅ Información del modelo usado
+✅ IDs de traza y de span
+✅ Marcas de tiempo y duraciones
+✅ ¡Y bastante más!
 """)
-    
-    # Setup complete telemetry collector
-    print("Setting up complete telemetry collector...")
-    
+
+    print("Configurando el colector de telemetría...")
+
     collector = CompleteTelemetryCollector()
-    
-    resource = Resource.create({
-        "service.name": "agent-demo",
-        "service.version": "1.0.0"
-    })
-    
-    tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(collector))
-    trace.set_tracer_provider(tracer_provider)
-    
-    setup_observability(enable_sensitive_data=True)
-    
-    print("✅ Complete telemetry collector ready\n")
-    
-    # Create agent
-    print("Creating agent...")
-    agent = AzureOpenAIChatClient(
-        endpoint=ENDPOINT,
-        deployment_name=DEPLOYMENT,
-        api_key=API_KEY,
-        api_version=API_VERSION
-    ).create_agent(
-        model="gpt-4o",
-        instructions="You are a helpful assistant.",
-        tools=[get_weather, calculate, search]
+
+    # UNA sola llamada reemplaza todo el montaje manual de OpenTelemetry.
+    # `exporters` acepta nuestro SpanExporter propio; el framework crea el
+    # Resource, el TracerProvider y el procesador de spans por nosotros.
+    # `enable_sensitive_data=True` incluye el CONTENIDO de los mensajes en los
+    # spans: sin esto el reporte quedaría sin las conversaciones.
+    configure_otel_providers(
+        exporters=[collector],
+        enable_sensitive_data=True,
     )
-    print("✅ Agent ready!\n")
-    
-    print("="*75)
-    print("INTERACTIVE MODE")
-    print("="*75)
-    print("Try: 'tell me a joke' or 'weather in Tokyo' or 'calculate 50*50'")
-    print("Type 'quit' to generate complete report\n")
-    
-    thread = agent.get_new_thread()
-    
+
+    print("✅ Colector de telemetría listo\n")
+
+    print("Creando el agente...")
+    chat_client = OpenAIChatClient(
+        model=DEPLOYMENT,
+        azure_endpoint=ENDPOINT,
+        api_key=API_KEY,
+        api_version=API_VERSION,
+    )
+
+    agent = Agent(
+        chat_client,
+        instructions="Eres un asistente útil. Sé conciso.",
+        name="ObservabilityBot",
+        tools=[get_weather, calculate, search],
+    )
+    print("✅ ¡Agente listo!\n")
+
+    print("=" * 75)
+    print("MODO INTERACTIVO")
+    print("=" * 75)
+    print("Prueba: 'cuéntame un chiste' · '¿qué clima hace en Tokio?' · 'calcula 50*50'")
+    print("Escribe 'quit' para generar el reporte completo\n")
+
+    session = agent.create_session()   # antes: agent.get_new_thread()
+
+    # El provider global lo creó configure_otel_providers; lo recuperamos para
+    # poder forzar el vaciado de spans antes de armar el reporte.
+    tracer_provider = trace.get_tracer_provider()
+
     try:
         while True:
-            user_input = input("You: ").strip()
-            
+            user_input = input("Tú: ").strip()
+
             if not user_input:
                 continue
-            
-            if user_input.lower() in ['quit', 'exit']:
+
+            if user_input.lower() in ['quit', 'exit', 'q']:
                 break
-            
-            print("\nAgent: ", end="", flush=True)
-            async for chunk in agent.run_stream(user_input, thread=thread):
-                print(chunk, end="", flush=True)
+
+            print("\nAgente: ", end="", flush=True)
+            async for chunk in agent.run(user_input, stream=True, session=session):
+                if chunk.text:
+                    print(chunk.text, end="", flush=True)
             print()
-            
+
+            # Vaciar el buffer para que los spans de este turno lleguen al colector.
             tracer_provider.force_flush()
-            
+
     except KeyboardInterrupt:
         print("\n")
-    
-    # Generate complete report
-    print("\n" + "="*75)
-    print("GENERATING COMPLETE REPORT...")
-    print("="*75 + "\n")
-    
+
+    print("\n" + "=" * 75)
+    print("GENERANDO EL REPORTE COMPLETO...")
+    print("=" * 75 + "\n")
+
     tracer_provider.force_flush()
-    
-    html_file = collector.generate_complete_html()
-    
-    print(f"✅ Complete Report: {html_file}")
-    print(f"📊 Total Operations: {len(collector.all_data)}")
-    
-    print(f"\n🌐 Opening report in browser...")
-    
-    import webbrowser
+
+    html_file = collector.generate_complete_html(REPORTE_HTML)
+
+    print(f"✅ Reporte generado: {html_file}")
+    print(f"📊 Operaciones capturadas: {len(collector.all_data)}")
+
+    if not collector.all_data:
+        print("⚠️  No se capturó telemetría: ¿conversaste antes de salir?")
+        return
+
+    print("\n🌐 Abriendo el reporte en el navegador...")
     try:
-        webbrowser.open(f"file:///{Path(html_file).absolute()}")
-        print("✅ Report opened! Check your browser for EVERYTHING!")
-    except:
-        print("⚠️  Please open the HTML file manually")
+        webbrowser.open(Path(html_file).absolute().as_uri())
+        print("✅ ¡Reporte abierto! Revisa tu navegador.")
+    except Exception:
+        print(f"⚠️  Ábrelo manualmente: {Path(html_file).absolute()}")
 
 
 if __name__ == "__main__":
