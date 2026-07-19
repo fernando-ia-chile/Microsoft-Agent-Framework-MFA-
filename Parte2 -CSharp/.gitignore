@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+.vs/
+
+# Artefactos que generan las demos al ejecutarse
+session_history.json
+ai_memory_profile.json
+complete_telemetry_report.html
+
+# Nunca versionar credenciales reales
+appsettings*.local.json

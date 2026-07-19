@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MFA.CSharp.Part2</RootNamespace>
+    <AssemblyName>MFA.CSharp.Part2</AssemblyName>
+    <!-- APIs marcadas como experimentales en los paquetes de IA. -->
+    <NoWarn>$(NoWarn);MEAI001;OPENAI001;AOAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft Agent Framework (.NET) -->
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+    <!-- SDK de Azure OpenAI -->
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
+    <!-- Extensiones de IA (AIFunctionFactory, ChatResponseFormat, ...) -->
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
+    <!-- Configuración (appsettings03.json). Se fija en 10.0.0 porque OpenTelemetry
+         arrastra esa versión y NuGet trata la degradación como error (NU1605). -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <!-- Observabilidad — Ejemplo 14 (equivale a opentelemetry-sdk en Python).
+         1.17.0 y no 1.14.0: esa versión arrastra OpenTelemetry.Api con una
+         vulnerabilidad conocida de gravedad moderada (NU1902 / GHSA-g94r-2vxg-569j). -->
+    <PackageReference Include="OpenTelemetry" Version="1.17.0" />
+    <!-- Model Context Protocol — Ejemplo 15 (equivale al paquete 'mcp' de Python).
+         Se usa la línea ESTABLE 1.4.1, no la preview que muestra la documentación. -->
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copiar la configuración al directorio de salida -->
+    <None Update="appsettings03.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
