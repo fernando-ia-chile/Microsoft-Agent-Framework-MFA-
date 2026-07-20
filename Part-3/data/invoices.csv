@@ -7,3 +7,6 @@ INV-005,Enterprise Systems,billing@enterprise.com,False,Database Migration Servi
 INV-006,TechVision Corp,accounts@techvision.com,True,Mobile App Development,35,170.00,2025-10-06
 INV-007,CloudFirst LLC,finance@cloudfirst.com,False,DevOps Implementation,18,190.00,2025-10-07
 INV-008,DataStream Inc,billing@datastream.com,False,Data Analytics Setup,22,175.00,2025-10-08
+INV-009,Boutique Analytics,billing@boutiqueanalytics.com,True,Consulting Retainer,20,140.00,2025-10-09
+INV-010,Northwind Traders,ap@northwind.com,False,Platform Migration,35,200.00,2025-10-10
+INV-011,Umbral Exacto SA,pagos@umbralexacto.com,False,Annual License,25,200.00,2025-10-11

@@ -1,0 +1,56 @@
+# Requirements para el laboratorio de Microsoft Agent Framework — Part 3 (Workflows)
+#
+# NOTA DE VERSIONES (2026-07-20):
+# El tutorial original se escribió para una API beta antigua (2025): WorkflowOutputEvent,
+# set_start_executor, run_stream, ChatAgent, AzureAIAgentClient. Las 6 demos ya están
+# migradas a la API estable actual (core 1.11.0) y probadas end-to-end.
+#
+# TRAMPA DE DEPENDENCIAS: NO instalar el meta-paquete `agent-framework`: arrastra
+# `agent-framework-azure-ai==1.0.0rc6`, INCOMPATIBLE con core 1.11.0. Se instalan los
+# subpaquetes concretos y pinneados.
+#
+# Criterio: se pinnea de forma explícita todo lo que el código IMPORTA de forma directa,
+# aunque algún paquete ya venga arrastrado por otro. Lo puramente transitivo no se lista.
+
+# Núcleo del framework: Workflow, WorkflowBuilder, WorkflowContext, Executor, @handler,
+# @executor, @response_handler, WorkflowEvent, Case/Default, WorkflowViz,
+# FileCheckpointStorage, Agent.
+# Es la ÚNICA dependencia de las demos 16-20 (cálculo local, sin LLM).
+agent-framework-core==1.11.0
+
+# Conector de Azure AI Foundry: FoundryChatClient.
+# Necesario SOLO para la demo 21 (agentes de IA dentro del workflow).
+# Arrastra a su vez azure-ai-projects (>=2.2.0,<3.0) y azure-ai-inference.
+agent-framework-foundry==1.10.1
+
+# Conector de Azure OpenAI / OpenAI (OpenAIChatClient, nativo-Azure vía azure_endpoint).
+# Ninguna demo de Part-3 lo usa hoy: se mantiene porque es la alternativa documentada a
+# Foundry para la demo 21 (API key, sin `az login`) y para no divergir de Part-1/Part-2.
+agent-framework-openai==1.10.1
+
+# Autenticación de Azure: AzureCliCredential -> requiere `az login`.
+# Uso directo en la demo 21.
+azure-identity>=1.25.0
+
+# Utilidades
+python-dotenv>=1.0.0        # Carga de archivos .env (todas las demos)
+typing-extensions>=4.16.0   # `Never`, usado en las anotaciones WorkflowContext[Never, T]
+                            # de TODAS las demos. Core lo arrastra, pero es uso directo.
+
+# ---------------------------------------------------------------------------
+# NOTAS SOBRE PAQUETES QUE **NO** HACEN FALTA
+# ---------------------------------------------------------------------------
+# `requests`          : venía heredado por copia del requirements de Part-1 (lo usaba
+#                       new_06). Ninguna demo de Part-3 lo importa.
+#
+# `azure-ai-projects` : lo declara `agent-framework-foundry` como dependencia. Ya no se
+#                       lista aquí porque, tras migrar la demo 21, ninguna demo importa
+#                       `AIProjectClient` de forma directa (se usa FoundryChatClient).
+#
+# `graphviz`          : NO hace falta para la demo 20. `WorkflowViz.to_mermaid()` y
+#                       `.to_digraph()` generan TEXTO (.mmd y .dot) sin dependencias.
+#                       Graphviz solo se necesita para RENDERIZAR imágenes con
+#                       save_png() / save_svg() / save_pdf(); la demo lo intenta dentro
+#                       de un try y avisa con claridad si no está instalado.
+#
+# `opentelemetry-sdk` : lo necesita la demo 14 de Part-2, no las de Part-3.
