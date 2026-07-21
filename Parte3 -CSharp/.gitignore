@@ -1,0 +1,14 @@
+bin/
+obj/
+*.user
+.vs/
+
+# Artefactos que generan las demos al ejecutarse
+output/
+logs/
+archive/
+checkpoints/
+visualizations/
+
+# Nunca versionar credenciales reales
+appsettings*.local.json

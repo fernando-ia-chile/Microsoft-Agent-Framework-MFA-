@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MFA.CSharp.Part3</RootNamespace>
+    <AssemblyName>MFA.CSharp.Part3</AssemblyName>
+    <!-- APIs marcadas como experimentales en los paquetes de IA y de Workflows.
+         MEAI001/OPENAI001/AOAI001 vienen de Microsoft.Extensions.AI y los SDK de OpenAI.
+         El motor de Workflows publica varias APIs bajo su propio diagnóstico. -->
+    <NoWarn>$(NoWarn);MEAI001;OPENAI001;AOAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft Agent Framework (.NET) -->
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+    <!-- Motor de WORKFLOWS: es el paquete central de esta Parte 3.
+         Equivale a lo que en Python vive dentro de agent-framework-core. -->
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+    <!-- Generador de codigo del patron [MessageHandler]. PrivateAssets=all porque
+         es una dependencia de COMPILACION: no se propaga a quien consuma este proyecto. -->
+    <PackageReference Include="Microsoft.Agents.AI.Workflows.Generators" Version="1.13.0" PrivateAssets="all" />
+    <!-- SDK de Azure OpenAI -->
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
+    <!-- Extensiones de IA (IChatClient, ChatOptions, ...) -->
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
+    <!-- Configuración (appsettings03.json). Se fija en 10.0.0 por coherencia con la Parte 2. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <!-- Autenticación de Azure (DefaultAzureCredential / AzureCliCredential) — Ejemplo 21. -->
+    <PackageReference Include="Azure.Identity" Version="1.17.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copiar la configuración y los datos al directorio de salida.
+         Los ejemplos resuelven rutas con AppContext.BaseDirectory, así que
+         data/invoices.csv debe viajar junto al ejecutable. -->
+    <None Update="appsettings03.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="data\invoices.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
