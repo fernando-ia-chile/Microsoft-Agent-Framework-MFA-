@@ -1,0 +1,13 @@
+Valparaíso, Chile — clima actual
+- Temperatura: 12,8 °C
+- Sensación térmica: 12,2 °C
+- Condición: cubierto
+- Humedad: 81 %
+- Nubosidad: 100 %
+- Viento: 3,6 km/h, con rachas de hasta 9,7 km/h
+- Precipitación registrada: 0,0 mm
+
+Resumen para informe:
+En Valparaíso predomina un cielo completamente cubierto, con ambiente fresco y húmedo, sin lluvia en este momento y con viento débil.
+
+Fuente: API de Open-Meteo.

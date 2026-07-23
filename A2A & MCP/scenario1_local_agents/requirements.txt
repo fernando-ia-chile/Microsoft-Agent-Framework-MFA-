@@ -1,21 +1,36 @@
-# Scenario 1 Specific Requirements
-# Inherits from main requirements.txt
+# =============================================================================
+# Escenario 1 - Agentes locales con A2A + MCP
+# Microsoft Agent Framework (MFA) - stack verificado el 2026-07-22
+# =============================================================================
+# ⚠️ NO instalar el meta-paquete `agent-framework`: arrastra
+#    `agent-framework-azure-ai==1.0.0rc6`, incompatible con core >= 1.11.
+#    Se instalan subpaquetes concretos y pinneados.
+#
+#   Instalación:  pip install -r requirements.txt
 
-# Azure AI and OpenAI
-azure-ai-projects>=1.0.0
-openai>=1.12.0
-azure-identity>=1.12.0
+# --- Núcleo del framework -----------------------------------------------------
+# El core trae de serie las herramientas MCP (MCPStdioTool, MCPStreamableHTTPTool,
+# MCPWebsocketTool): no hace falta ningún subpaquete extra para MCP.
+agent-framework-core==1.12.0
 
-# MCP SDK
-mcp[cli]>=1.2.0
+# Cliente de chat nativo-Azure (OpenAIChatClient). Sustituye al antiguo
+# AzureOpenAIChatClient y al uso directo de `openai.AzureOpenAI`.
+agent-framework-openai==1.10.2
 
-# HTTP and async
-httpx>=0.25.0
-aiohttp>=3.9.0
+# --- A2A (Agent-to-Agent) -----------------------------------------------------
+# Se importa como `agent_framework.a2a` (A2AAgent, A2AExecutor, A2AAgentSession).
+# ⚠️ Sigue en BETA, a diferencia del core.
+# ⚠️ Las builds <= 1.0.0b260212 declaran `a2a-sdk>=0.3.5` sin techo y REVIENTAN
+#    con a2a-sdk 1.x (`ImportError: cannot import name 'FilePart'`). Esta build ya
+#    declara `a2a-sdk>=1.0.0,<2`; por eso ambos van pinneados juntos.
+agent-framework-a2a==1.0.0b260721
+a2a-sdk==1.1.2
 
-# Utilities
-python-dotenv>=1.0.0
-pydantic>=2.5.0
+# --- SDK de MCP ---------------------------------------------------------------
+# Necesario para los servidores locales (FastMCP + @mcp.tool()).
+mcp==1.28.1
 
-# CLI and formatting
-rich>=13.7.0
+# --- Utilidades ---------------------------------------------------------------
+httpx==0.28.1          # cliente HTTP del servidor de clima (API Open-Meteo)
+python-dotenv==1.2.2   # carga de los archivos .env
+rich==15.0.0           # formato en consola (lo usa también la CLI de mcp)

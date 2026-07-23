@@ -1,8 +1,0 @@
-# Solo la BASE del recurso: el framework agrega /openai/v1/ por su cuenta.
-AZURE_OPENAI_ENDPOINT=
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-5.4-mini
-
-AZURE_OPENAI_API_KEY=
-
-AZURE_OPENAI_API_VERSION=preview
-

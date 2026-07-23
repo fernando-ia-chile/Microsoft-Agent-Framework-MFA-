@@ -76,7 +76,8 @@ API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "preview")
 # ============================================================================
 # MIDDLEWARE 1: TIMING (Agent Middleware)
 # ============================================================================
-
+## Mide cuánto tarda el run completo del agente, incluyendo la preparación del 
+# stream y la emisión de tokens.
 @agent_middleware
 async def timing_middleware(context: AgentContext, call_next) -> None:
     """Mide cuánto tarda el run completo del agente.
@@ -121,7 +122,7 @@ async def timing_middleware(context: AgentContext, call_next) -> None:
 
 PALABRAS_BLOQUEADAS = ["password", "contraseña", "secret", "hack", "exploit", "bypass"]
 
-
+## Controla el flujo de la petición: si detecta contenido sensible, corta la ejecución
 @agent_middleware
 async def security_middleware(context: AgentContext, call_next) -> None:
     """Bloquea la petición si detecta contenido sensible.
@@ -144,7 +145,7 @@ async def security_middleware(context: AgentContext, call_next) -> None:
 # ============================================================================
 # MIDDLEWARE 3: LOGGER DE FUNCIONES (Function Middleware)
 # ============================================================================
-
+## Registra cada llamada a una tool: nombre, argumentos y resultado.
 @function_middleware
 async def function_logger_middleware(context: FunctionInvocationContext, call_next) -> None:
     """Registra cada llamada a una tool: nombre, argumentos y resultado."""
@@ -165,7 +166,7 @@ async def function_logger_middleware(context: FunctionInvocationContext, call_ne
 # ============================================================================
 # MIDDLEWARE 4: CONTADOR DE TOKENS (Chat Middleware)
 # ============================================================================
-
+## Informa el consumo REAL de tokens de cada llamada al modelo, según lo reporta el proveedor.
 @chat_middleware
 async def token_counter_middleware(context: ChatContext, call_next) -> None:
     """Informa el consumo REAL de tokens de cada llamada al modelo.
@@ -236,7 +237,6 @@ def get_time() -> str:
     """Devuelve la hora actual."""
     return f"Hora actual: {datetime.now().strftime('%H:%M:%S')}"
 
-
 def search_database(
     consulta: Annotated[str, Field(description="Qué buscar: 'usuarios', 'productos' u 'ordenes'")]
 ) -> str:
@@ -260,10 +260,10 @@ async def main():
     print("""
 Esta demo ejecuta 4 middleware al mismo tiempo:
 
-1️⃣  TIMING (agent)       → mide cuánto tarda cada petición
-2️⃣  SEGURIDAD (agent)    → bloquea contenido sensible
-3️⃣  LOGGER (function)    → registra todas las llamadas a tools
-4️⃣  TOKENS (chat)        → informa el consumo real de tokens
+1️⃣  TIMING (agent)       → mide cuánto tarda cada petición 
+2️⃣  SEGURIDAD (agent)    → bloquea contenido sensible antes que llegue al modelo
+3️⃣  LOGGER (function)    → registra todas las llamadas a tools 
+4️⃣  TOKENS (chat)        → informa el consumo real de tokens 
 
 ¡Observa cómo se combinan en una conversación real!
 """)

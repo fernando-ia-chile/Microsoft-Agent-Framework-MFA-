@@ -80,7 +80,9 @@ def guardar_sesion(session: AgentSession, numero_mensaje: int) -> int:
         f.write(contenido)
     return len(contenido)
 
-
+#-----------------------------
+# Funciones que se encargan de la serialización y deserialización de la sesión
+# -----------------------------
 def cargar_sesion() -> tuple[AgentSession | None, int]:
     """Lee el JSON del disco y reconstruye la sesión.
 
@@ -98,7 +100,8 @@ def cargar_sesion() -> tuple[AgentSession | None, int]:
         print(f"   ⚠️  No se pudo cargar la sesión previa: {e}")
         return None, 0
 
-
+# -----------------------------
+# Función auxiliar para leer el historial de mensajes guardados en la sesión.
 async def leer_historial(
     historial: InMemoryHistoryProvider, session: AgentSession
 ) -> list[Message]:
@@ -117,7 +120,6 @@ async def leer_historial(
         session.session_id,
         state=session.state.get(historial.source_id),
     )
-
 
 async def main():
     """Demo interactiva: serialización y restauración de la sesión en cada turno."""
@@ -235,7 +237,6 @@ async def main():
     print("   • Al volver a ejecutar el script, la conversación continúa")
     print(f"\n📁 Revisa el archivo: {SESSION_FILE}")
     print("=" * 70 + "\n")
-
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -103,6 +103,7 @@ async def main():
     )
 
     # Agente con las 3 herramientas adjuntas; el modelo elige cuál usar.
+    # El agente local actúa como un orquestador: conecta el modelo con las funciones que definí.
     agent = Agent(
         chat_client,
         instructions="Eres un asistente útil con herramientas de clima, calculadora y hora. Elige la herramienta correcta automáticamente.",
