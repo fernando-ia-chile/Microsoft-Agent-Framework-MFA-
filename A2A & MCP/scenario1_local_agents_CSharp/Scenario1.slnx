@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/McpServers/">
+    <Project Path="McpServers/Scenario1.FileOperationsServer/Scenario1.FileOperationsServer.csproj" />
+    <Project Path="McpServers/Scenario1.WeatherServer/Scenario1.WeatherServer.csproj" />
+  </Folder>
+  <Project Path="Scenario1.Host/Scenario1.Host.csproj" />
+</Solution>

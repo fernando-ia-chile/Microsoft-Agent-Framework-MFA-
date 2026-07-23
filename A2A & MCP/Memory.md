@@ -15,6 +15,52 @@ Se registra TODO: cambios de código, cambios de dependencias y decisiones relev
 
 ---
 
+## 2026-07-23 — `scenario1_local_agents_CSharp/`: réplica completa del escenario 1 en C# ✅
+
+**Cambio:** proyecto **nuevo** (no una migración): todo el escenario 1 reimplementado en C#/.NET 10, con la misma arquitectura, los mismos conceptos y el mismo estilo didáctico que el gemelo en Python.
+
+**Estructura** (solución con 3 proyectos):
+- `Scenario1.Host` — programa principal: `Program.cs` (UI interactiva), `Orquestador.cs`, `Configuracion.cs`, `A2A/MensajeA2A.cs` y los tres agentes en `Agents/`.
+- `McpServers/Scenario1.WeatherServer` — servidor MCP de clima (3 herramientas).
+- `McpServers/Scenario1.FileOperationsServer` — servidor MCP de archivos (5 herramientas).
+
+**Equivalencias de librerías** (buscadas en NuGet):
+
+| Python | C# / .NET |
+|---|---|
+| `agent-framework-core` 1.12.0 | **`Microsoft.Agents.AI` 1.15.0** |
+| `agent-framework-openai` 1.10.2 | **`Microsoft.Agents.AI.OpenAI` 1.15.0** + `Azure.AI.OpenAI` 2.1.0 |
+| `mcp` 1.28.1 | **`ModelContextProtocol` 1.4.1** |
+| `python-dotenv` + `.env` | **`Microsoft.Extensions.Configuration`** + `appsettings.json` |
+| `httpx` | `HttpClient` (BCL) |
+| `pydantic.BaseModel` | `record` + `[Description]` |
+| `rich` | No hace falta: `Console` con UTF-8 |
+
+**Equivalencias de API:** `OpenAIChatClient(...)` → `new AzureOpenAIClient(...).GetChatClient(...)`; `Agent(client, instructions, tools=[...])` → `chatClient.AsAIAgent(instructions, name, tools: [...])`; `agent.run(x, stream=True)` → `agent.RunStreamingAsync(x)`; `MCPStdioTool` → `StdioClientTransport` + `McpClient.CreateAsync`; `tool.functions` → `cliente.ListToolsAsync()`; `@mcp.tool(annotations=ToolAnnotations(...))` → `[McpServerTool(ReadOnly=…, Destructive=…, Idempotent=…, OpenWorld=…, UseStructuredContent=true)]`; `FastMCP(instructions=…)` → `AddMcpServer(o => o.ServerInstructions = …)`; `mcp.run(transport="stdio")` → `.WithStdioServerTransport()`.
+
+**Mejora que aporta C#:** el contrato A2A pasa de convención a **interfaz `IAgenteA2A`**. En Python todos los agentes *tenían* un `handle_message` por acuerdo; aquí el compilador lo exige. Los mensajes dejan de ser diccionarios sueltos y son los records `MensajeA2A` / `RespuestaA2A`.
+
+**Notas y hallazgos:**
+- ⚠️ **No existe `Microsoft.Agents.AI.A2A` en NuGet.** El paquete `agent-framework-a2a` (beta) de Python no tiene equivalente publicado en .NET. No afecta: igual que en Python, la delegación se implementa con herramientas sobre un contrato de mensajes propio.
+- 🐞 **Trampa .NET 10:** `dotnet new sln` genera el formato nuevo **`.slnx`**, no `.sln`. La detección de la raíz de la solución fallaba al buscar solo `*.sln`; ahora busca ambos. Afectaba a `Configuracion.ResolverRaiz()` y a `Workspace.ResolverEspacioDeTrabajo()`.
+- 🔌 **Los servidores MCP son proyectos ejecutables aparte.** El Host los referencia con `ReferenceOutputAssembly="false"`: se compilan antes que él pero **no** se enlazan sus tipos, porque se lanzan como procesos.
+- 🚨 **Misma trampa de stdout que en Python**, resuelta a la manera de .NET: `builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace)` y `Console.Error.WriteLine` para los mensajes de arranque.
+- 🔒 El guardián anti-escape usa comparación con separador de ruta final en vez de `StartsWith` a secas, para evitar el fallo del directorio hermano `agent_workspace_evil`.
+- 🔑 **Credenciales:** `appsettings.json` se versiona con valores de EJEMPLO; las claves reales van en `appsettings.Development.json` (en `.gitignore`) o en variables de entorno, que tienen prioridad. Se añadió `.gitignore` (que el proyecto Python **no** tiene).
+
+**Pruebas realizadas:**
+- ✅ `dotnet build` de la solución completa: **0 errores, 0 advertencias**.
+- ✅ Arranque y **descubrimiento MCP por protocolo**: 3 herramientas del servidor de clima y 5 del de archivos.
+- ✅ **Flujo multiagente completo contra Azure real**: *"¿Qué tiempo hace en Valparaíso, Chile? Guárdalo en informe_valpo.txt"* → **2/2 pasos**, archivo generado con datos reales (15,1 °C, llovizna ligera).
+- ✅ **`a2a-directo`**: las tres demos y el ping a los tres agentes.
+- ✅ **Las 5 operaciones de archivo** en ciclo completo (escribir → leer → info → listar → borrar).
+- ✅ **Seguridad**: bloqueados `../../secreto.txt` y `../agent_workspace_evil/x.txt`.
+- ✅ **Errores**: archivo inexistente lanza `FileNotFoundException`.
+
+**README.md** propio, con la misma estructura que el de Python (progresión por niveles, aplicabilidad real, glosario, ejercicios), más una **tabla de equivalencias Python ↔ C#** para quien venga del otro proyecto. Autoría: Fernando Valdés H.
+
+---
+
 ## 2026-07-22 — `run_scenario1.py` migrado ✅ — 🎉🎉 ESCENARIO 1 COMPLETO AL 100 %
 
 **Cambio:** migrado el orquestador y la interfaz interactiva, último componente del escenario.

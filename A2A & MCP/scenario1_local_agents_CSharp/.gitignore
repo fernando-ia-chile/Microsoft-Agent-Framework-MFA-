@@ -1,0 +1,17 @@
+# Compilación de .NET
+bin/
+obj/
+
+# Espacio de trabajo de los agentes (se regenera al ejecutar)
+agent_workspace/
+
+# ⚠️ Configuración con credenciales reales.
+# appsettings.json se versiona SOLO con valores de ejemplo.
+# Para tus claves usa este archivo, que nunca se sube:
+appsettings.Development.json
+appsettings.Local.json
+
+# Varios de Visual Studio / Rider
+.vs/
+.idea/
+*.user

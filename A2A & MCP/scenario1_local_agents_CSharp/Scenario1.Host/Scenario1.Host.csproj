@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Copia appsettings.json junto al ejecutable (equivale al .env de Python). -->
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Opcional: tus credenciales reales. Está en .gitignore. -->
+    <None Update="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('appsettings.Development.json')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Fuerza a compilar los dos servidores MCP antes que este proyecto.
+      ReferenceOutputAssembly=false: NO se referencian sus tipos, solo se garantiza
+      que sus DLL existan, porque el agente los lanza como procesos aparte.
+    -->
+    <ProjectReference Include="..\McpServers\Scenario1.WeatherServer\Scenario1.WeatherServer.csproj"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\McpServers\Scenario1.FileOperationsServer\Scenario1.FileOperationsServer.csproj"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.15.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.15.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+  </ItemGroup>
+
+</Project>
