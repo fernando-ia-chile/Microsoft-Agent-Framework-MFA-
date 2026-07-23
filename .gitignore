@@ -1,0 +1,11 @@
+# Credenciales: nunca versionar archivos de entorno
+.env*
+!.env*.example
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Cache de Python
+__pycache__/
+*.py[cod]
