@@ -1,396 +1,262 @@
-# MAF A2A: Microsoft Agent Framework with Agent-to-Agent Communication
+# 🤝 A2A & MCP — Agentes que hablan entre ellos y usan herramientas de verdad
 
-This repository demonstrates **Microsoft Agent Framework (MAF)** concepts through two complementary scenarios, showcasing how AI agents can communicate with each other using Agent-to-Agent (A2A) protocol and leverage Model Context Protocol (MCP) tools.
+> Cuarto bloque de la serie sobre **Microsoft Agent Framework (MFA)**.
+> Aquí los agentes dejan de trabajar solos: se **reparten el trabajo entre ellos (A2A)** y **usan
+> herramientas externas mediante un protocolo estándar (MCP)**.
 
-## 📚 Overview
-
-This project contains two distinct scenarios that demonstrate different approaches to building multi-agent systems:
-
-1. **Scenario 1: Local Agents** - Custom Python agents running locally with Azure OpenAI
-2. **Scenario 2: Azure AI Foundry Agents** - Cloud-hosted agents using Azure AI Foundry Agent Service
-
-Both scenarios implement:
-- ✅ **Agent-to-Agent (A2A) Communication** - Agents collaborating and delegating tasks
-- ✅ **Model Context Protocol (MCP)** - Agents accessing external tools and services
-- ✅ **Multi-Agent Orchestration** - Coordinator agents managing workflows
-- ✅ **Microsoft Agent Framework Concepts** - Following MAF design patterns
-
----
-
-## 🎯 Scenario Comparison
-
-| Feature | Scenario 1: Local Agents | Scenario 2: Azure AI Foundry |
-|---------|-------------------------|------------------------------|
-| **Hosting** | Local Python processes | Azure Cloud Service |
-| **MCP Servers** | Local MCP servers (Weather, File Ops) | Remote MCP server (Microsoft Learn) |
-| **Agent Creation** | Custom Python classes | Azure AI Foundry SDK |
-| **Infrastructure** | Self-managed | Azure-managed |
-| **Best For** | Learning, prototyping, offline use | Production, scalability, enterprise |
-| **Setup Complexity** | Medium | High (requires Azure resources) |
-| **Cost** | Azure OpenAI API only | Azure AI Foundry + Azure OpenAI |
-
----
-
-## 📁 Project Structure
 
 ```
-MAF A2A/
-├── scenario1_local_agents/          # Local agent implementation
-│   ├── agents/                      # Three agent implementations
-│   │   ├── agent1_research.py       # Research agent (Weather MCP)
-│   │   ├── agent2_coordinator.py    # Coordinator agent
-│   │   └── agent3_executor.py      # Executor agent (File MCP)
-│   ├── mcp_servers/                 # Local MCP servers
-│   │   ├── weather_server.py        # Weather information MCP server
-│   │   └── file_operations_server.py # File operations MCP server
-│   ├── run_scenario1.py             # Main orchestration script
-│   ├── requirements.txt             # Python dependencies
-│   └── README.md                    # Detailed Scenario 1 documentation
-│
-├── scenario2_azure_foundry/         # Azure-hosted agents
-│   ├── interactive_maf_demo.py      # Interactive agent creation & A2A demo
-│   ├── requirements.txt             # Python dependencies
-│   ├── .env                         # Azure credentials (not in repo)
-│   └── README.md                    # Detailed Scenario 2 documentation
-│
-└── README.md                        # This file
+                          👤 Usuario
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │   COORDINADOR     │   ← reparte el trabajo
+                    └─────────┬─────────┘
+                        A2A   │   A2A
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+            ┌───────────────┐   ┌───────────────┐
+            │ INVESTIGACIÓN │   │   EJECUTOR    │   ← especialistas
+            └───────┬───────┘   └───────┬───────┘
+                MCP │                   │ MCP
+                    ▼                   ▼
+            🔌 Herramientas externas (clima, archivos, documentación…)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🎯 Qué se aprende en este bloque
 
-### Prerequisites
+| Concepto | En una frase | Por qué importa |
+|---|---|---|
+| **MFA** — Microsoft Agent Framework | La librería que convierte un modelo de lenguaje en un *agente*: instrucciones + herramientas + memoria | Es el andamiaje que te ahorra escribir el bucle de llamadas a herramientas a mano |
+| **MCP** — Model Context Protocol | El "USB-C" de las herramientas: un estándar para que **cualquier** agente use **cualquier** herramienta | Escribes la herramienta una vez y la usa tu agente, Claude Desktop, VS Code… |
+| **A2A** — Agent-to-Agent | Cómo un agente le delega trabajo a otro | Un equipo de especialistas se equivoca menos que un agente que lo sabe todo |
+| **Aprobación humana** | El agente se detiene y pide permiso antes de ejecutar una herramienta | Es lo que hace que un agente sea desplegable en una empresa |
 
-- Python 3.8 or higher
-- Azure OpenAI account (for both scenarios)
-- Azure AI Foundry project (for Scenario 2 only)
+### Lo elemental, en 60 segundos
 
-### Choose Your Scenario
+**Un agente** = un modelo de lenguaje + unas instrucciones + unas herramientas.
+El modelo **no ejecuta nada**: *decide* qué herramienta llamar, y el framework la ejecuta por él.
 
-**Start with Scenario 1 if you:**
-- Want to learn how A2A and MCP work at a low level
-- Prefer running everything locally
-- Want full control over agent implementation
-- Are prototyping or experimenting
+**MCP** resuelve un problema real: antes, cada herramienta se programaba a medida para cada agente. Con MCP el servidor **publica** sus herramientas y el cliente las **descubre** al conectarse — nadie escribe la lista a mano.
 
-**Start with Scenario 2 if you:**
-- Need production-ready, scalable agents
-- Want to leverage Azure AI Foundry services
-- Need access to Microsoft Learn documentation
-- Prefer cloud-managed infrastructure
+**A2A** es lo mismo, pero entre agentes: en vez de un agente gigante, varios especialistas y un coordinador que reparte. Igual que un equipo de personas.
 
 ---
 
-## 📖 Scenario 1: Local Agents
+## 📦 Los cuatro proyectos
 
-**Location:** `scenario1_local_agents/`
+El mismo bloque se resuelve **dos veces** (local y nube) y en **dos lenguajes** (Python y C#). Los cuatro proyectos son independientes: no comparten código ni configuración.
 
-### Architecture
+| Proyecto | Lenguaje | Qué demuestra |
+|---|---|---|
+| [`scenario1_local_agents/`](scenario1_local_agents/) | Python 3.14 | 3 agentes locales + **2 servidores MCP propios** (clima y archivos) por stdio. El **modelo decide** el orden de los pasos |
+| [`scenario1_local_agents_CSharp/`](scenario1_local_agents_CSharp/) | C# / .NET 10 | Lo mismo, con `Microsoft.Agents.AI`. El contrato A2A pasa de convención a **interfaz** |
+| [`scenario2_azure_foundry/`](scenario2_azure_foundry/) | Python 3.14 | 3 agentes sobre **Azure AI Foundry** + el **MCP remoto de Microsoft Learn**, con **aprobación humana** de cada llamada |
+| [`scenario2_azure_foundry_CSharp/`](scenario2_azure_foundry_CSharp/) | C# / .NET 10 | Lo mismo, con `Microsoft.Agents.AI.Foundry` |
+
+> 📖 **Cada proyecto tiene su propio README**, con la explicación completa, la puesta en marcha, el glosario y sus ejercicios. Este archivo es solo el mapa general.
+
+---
+
+## 🆚 Escenario 1 vs Escenario 2
+
+No es "uno básico y otro avanzado": son **dos formas de resolver lo mismo**, y compararlas es la mitad del aprendizaje.
+
+| | 🖥️ Escenario 1 — local | ☁️ Escenario 2 — nube |
+|---|---|---|
+| ¿Dónde vive el modelo? | Azure OpenAI | **Azure AI Foundry** |
+| ¿Quién autentica? | Clave de API en el `.env` | **Tu identidad de Azure** (`az login`) — sin claves en disco |
+| Servidores MCP | **Tuyos**, en local, como subprocesos | **De Microsoft**, remoto y público |
+| Transporte MCP | stdio (tuberías del sistema operativo) | HTTP en streaming |
+| Herramientas | 8 propias (3 de clima + 5 de archivos) | 3 descubiertas de Microsoft Learn |
+| ¿Quién decide el orden de los pasos? | El **modelo**, con herramientas de delegación | El **guion**, paso a paso y con pausas |
+| Aprobación de herramientas | No hay | ✅ **Sí**, obligatoria en cada llamada |
+| ¿Escribe en tu disco? | Sí (`agent_workspace/`) | No |
+| Coste | Cuota de Azure OpenAI | Cuota de Azure AI Foundry |
+
+> 💡 **Por qué esa diferencia deliberada en "quién decide":** en el escenario 1 ves la magia — el modelo se organiza solo y encadena a los agentes. En el escenario 2 ves **la mecánica**, un mensaje cada vez, para poder mirarla con lupa. Los dos enfoques son válidos en producción; conviene entender los dos.
+
+---
+
+## 🧭 Ruta de aprendizaje recomendada
 
 ```
-User Request
-    ↓
-Coordinator Agent (Orchestrates)
-    ├─→ Research Agent (Weather MCP) → Local Weather Server
-    └─→ Executor Agent (File MCP) → Local File Server
-    ↓
-Final Response
+  1️⃣  Escenario 1 · Nivel 1     Arranca SOLO un servidor MCP y mira sus herramientas
+        ↓                        (sin agentes, sin modelo, sin gastar un token)
+  2️⃣  Escenario 1 · Nivel 2     Un agente solo, hablando con ese servidor
+        ↓
+  3️⃣  Escenario 1 · Nivel 3     Dos agentes hablando entre ellos (A2A)
+        ↓
+  4️⃣  Escenario 1 · Nivel 4     El sistema completo, con el modelo orquestando
+        ↓
+  5️⃣  Escenario 2               Lo mismo en la nube: identidad corporativa,
+        ↓                        MCP remoto y aprobación humana
+  6️⃣  El gemelo en C#           El mismo ejercicio con tipos e interfaces
 ```
 
-### Key Features
+Los niveles 1–4 están detallados en el [README del escenario 1](scenario1_local_agents/README.md).
 
-- **3 Custom Agents**: Research, Coordinator, Executor
-- **2 Local MCP Servers**: Weather (port 8001), File Operations (port 8002)
-- **A2A Protocol**: Custom implementation for agent communication
-- **Full Control**: Complete access to agent logic and behavior
+**Si vienes de Python y quieres el equivalente en C#** (o al revés), los READMEs de los proyectos C# traen una **tabla de equivalencias** librería a librería y API a API.
 
-### Quick Start
+---
+
+## 🚀 Puesta en marcha
+
+### Requisitos comunes
+
+- Cuenta de Azure con un modelo desplegado.
+- **Python 3.12+** (probado en 3.14) para los proyectos Python.
+- **.NET 10 SDK** para los proyectos C#.
+- **Azure CLI** (`az login`) para el escenario 2.
+
+### Escenario 1 — Python
 
 ```powershell
-# 1. Install dependencies
-cd scenario1_local_agents
+cd "scenario1_local_agents"
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 2. Configure environment
-cp .env.template .env
-# Edit .env with your Azure OpenAI credentials
-
-# 3. Start MCP servers (in separate terminals)
-python mcp_servers/weather_server.py
-python mcp_servers/file_operations_server.py
-
-# 4. Run the scenario
 python run_scenario1.py
 ```
 
-### Example Workflow
+Arranca directamente en modo interactivo. Comandos: `ciudades`, `demo`, `a2a`, `a2a-directo`, `arquitectura`, `ayuda`, `salir`.
 
-**User:** "What's the weather in Seattle and save it to a file?"
+> ⚠️ Ejecútalo **desde su carpeta**: el espacio de trabajo de archivos y las rutas de los servidores MCP se resuelven desde ahí.
+> ✅ **No hace falta arrancar los servidores MCP a mano**: el orquestador los lanza como subprocesos y gestiona su ciclo de vida.
 
-1. Coordinator receives request
-2. Coordinator → Research Agent (via A2A): "Get Seattle weather"
-3. Research Agent → Weather MCP Server: `get_weather("Seattle")`
-4. Research Agent → Coordinator (via A2A): Weather data
-5. Coordinator → Executor Agent (via A2A): "Save weather data"
-6. Executor Agent → File MCP Server: `write_file("seattle_weather.txt", data)`
-7. Coordinator responds: "Weather saved to seattle_weather.txt"
-
-
-
----
-
-## 📖 Scenario 2: Azure AI Foundry Agents
-
-**Location:** `scenario2_azure_foundry/`
-
-### Architecture
-
-```
-User Request
-    ↓
-Coordinator Agent (Azure AI Foundry)
-    ↓ (A2A via Azure Threads)
-Research Agent (Azure AI Foundry + Microsoft Learn MCP)
-    ↓ (MCP Protocol)
-Microsoft Learn MCP Server (Public API)
-    ↓
-Final Response
-```
-
-### Key Features
-
-- **Cloud-Hosted Agents**: Managed by Azure AI Foundry
-- **Microsoft Learn MCP**: Access to up-to-date Microsoft documentation
-- **Azure SDK Integration**: Using `azure.ai.projects` and `azure.ai.agents`
-- **Interactive Demo**: Step-by-step agent creation and A2A demonstration
-
-### Quick Start
+### Escenario 2 — Python
 
 ```powershell
-# 1. Install dependencies
-cd scenario2_azure_foundry
+cd "scenario2_azure_foundry"
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 2. Configure environment
-# Edit .env with your Azure AI Foundry credentials:
-# - AZURE_AI_FOUNDRY_ENDPOINT
-# - AZURE_AI_FOUNDRY_API_KEY
-# - AZURE_AI_FOUNDRY_PROJECT
-# - AZURE_AI_PROJECT_ENDPOINT
-# - AZURE_OPENAI_ENDPOINT (optional, for local comparison)
-
-# 3. Run interactive demo
+az login
 python interactive_maf_demo.py
 ```
 
-### Example Workflow
+### Escenario 1 y 2 — C#
 
-**User:** "Which regions support Azure AI Foundry Agent Service to use MCP?"
-
-1. User asks Coordinator Agent
-2. Coordinator → Research Agent (via A2A): "Search Microsoft Learn for MCP regions"
-3. Research Agent → Microsoft Learn MCP: `microsoft_docs_search("MCP regions Azure AI Foundry")`
-4. Research Agent → Microsoft Learn MCP: `microsoft_docs_fetch(article_url)`
-5. Research Agent → Coordinator (via A2A): Found documentation with regions
-6. Coordinator responds: Lists supported regions with citations
-
-
-
----
-
-## 🔑 Key Concepts
-
-### Agent-to-Agent (A2A) Communication
-
-A2A allows agents to communicate directly with each other, enabling:
-- **Task Delegation**: One agent can ask another to perform specific tasks
-- **Collaborative Problem Solving**: Multiple agents working together
-- **Specialization**: Agents can focus on their strengths
-
-**Implementation:**
-- **Scenario 1**: Custom message passing between Python objects
-- **Scenario 2**: Azure AI Foundry threads enable A2A between cloud agents
-
-### Model Context Protocol (MCP)
-
-MCP provides a standardized way for agents to access external tools and data:
-- **Tools**: Functions that agents can call (e.g., `get_weather`, `read_file`)
-- **Servers**: Services that provide MCP tools (e.g., Weather Server, Microsoft Learn)
-- **Protocol**: JSON-RPC based communication
-
-**Implementation:**
-- **Scenario 1**: Local MCP servers with custom tools
-- **Scenario 2**: Remote Microsoft Learn MCP server for documentation access
-
-### Microsoft Agent Framework (MAF)
-
-MAF is a conceptual framework for building AI agents:
-- **Not a separate package**: Implemented through Azure AI Foundry SDK
-- **Design Patterns**: Coordinator, Research, Executor agent patterns
-- **Best Practices**: Agent specialization, delegation, orchestration
-
----
-
-## 🎓 Learning Path
-
-### Beginner Path
-
-1. **Start with Scenario 1**
-   - Understand basic agent concepts
-   - Learn how MCP servers work
-   - See A2A communication in action
-   - Modify agents to experiment
-
-2. **Progress to Scenario 2**
-   - Understand cloud-hosted agents
-   - Learn Azure AI Foundry SDK
-   - See production-ready patterns
-
-### Advanced Path
-
-1. **Extend Scenario 1**
-   - Create new MCP servers with custom tools
-   - Add more specialized agents
-   - Implement complex multi-agent workflows
-
-2. **Productionize Scenario 2**
-   - Deploy agents to Azure
-   - Integrate with enterprise systems
-   - Add monitoring and logging
-   - Scale to multiple regions
-
----
-
-## 🛠️ Common Tasks
-
-### Testing A2A Communication
-
-**Scenario 1:**
 ```powershell
-# Test individual agents
-python scenario1_local_agents/agents/agent1_research.py
-python scenario1_local_agents/agents/agent2_coordinator.py
-```
-
-**Scenario 2:**
-```powershell
-# Interactive demo shows A2A in real-time
-python scenario2_azure_foundry/interactive_maf_demo.py
-```
-
-### Creating New MCP Tools
-
-**Scenario 1:** Add tools to existing MCP servers or create new ones
-**Scenario 2:** Connect to additional remote MCP servers via configuration
-
-### Debugging
-
-- **Scenario 1**: Check console logs, MCP server outputs
-- **Scenario 2**: Check Azure portal, agent run history, thread messages
-
----
-
-## 📋 Requirements by Scenario
-
-### Scenario 1 Requirements
-
-- Azure OpenAI account
-- Python 3.8+
-- Local network access (for MCP servers)
-
-### Scenario 2 Requirements
-
-- Azure AI Foundry project
-- Azure OpenAI account
-- Python 3.8+
-- Azure CLI (`az login`) or API keys
-- Internet access (for Microsoft Learn MCP)
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-**Scenario 1** (`.env` in `scenario1_local_agents/`):
-```bash
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
-```
-
-**Scenario 2** (`.env` in `scenario2_azure_foundry/`):
-```bash
-AZURE_AI_FOUNDRY_ENDPOINT=https://your-resource.services.ai.azure.com/
-AZURE_AI_FOUNDRY_API_KEY=your-key
-AZURE_AI_FOUNDRY_PROJECT=your-project-name
-AZURE_AI_PROJECT_ENDPOINT=https://your-resource.services.ai.azure.com/api/projects/your-project
+cd "scenario1_local_agents_CSharp"     # o scenario2_azure_foundry_CSharp
+dotnet build
+az login                                # solo el escenario 2
+dotnet run --project Scenario1.Host     # o --project Scenario2.Host
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## 🔐 Configuración y credenciales
 
-### Scenario 1 Issues
+Cada proyecto se configura por separado. **Nunca** se versionan valores reales:
 
-**MCP Servers Not Starting:**
-- Check ports 8001 and 8002 are available
-- Verify firewall settings
-- Check Python dependencies installed
+| Proyecto | Archivo de configuración | Plantilla pública |
+|---|---|---|
+| `scenario1_local_agents` | `.env` (ignorado por git) | — (las variables están más abajo) |
+| `scenario2_azure_foundry` | `.env` (ignorado por git) | [`.env.example`](scenario2_azure_foundry/.env.example) |
+| Proyectos C# | `appsettings.Development.json` (ignorado por git) | `appsettings.json` con placeholders `<…>` |
 
-**Agents Not Communicating:**
-- Ensure all MCP servers are running
-- Check agent IDs match
-- Review console logs
+Las **variables de entorno del sistema mandan** sobre los archivos, en los cuatro proyectos.
 
-### Scenario 2 Issues
+**Escenario 1** necesita `AZURE_OPENAI_ENDPOINT` (solo la base, sin `/openai/...`), `AZURE_OPENAI_API_KEY` y `AZURE_OPENAI_DEPLOYMENT_NAME`.
 
-**Agent Creation Fails:**
-- Verify Azure credentials in `.env`
-- Check Azure AI Foundry project exists
-- Ensure correct API version
+**Escenario 2** necesita `AZURE_AI_PROJECT_ENDPOINT` (o `AZURE_AI_FOUNDRY_ENDPOINT` + `AZURE_AI_FOUNDRY_PROJECT`) y `AZURE_OPENAI_DEPLOYMENT_NAME` — que aquí nombra el **modelo de Foundry**, no un deployment de Azure OpenAI. **No lleva clave de API**: autentica con tu identidad mediante `DefaultAzureCredential`.
 
-**MCP Tools Not Working:**
-- Verify Microsoft Learn MCP server URL
-- Check tool approval status in Azure portal
-- Review agent run logs
+> ⚠️ Los agentes del escenario 2 son **efímeros**: viven en memoria y **no** quedan registrados en tu proyecto de Azure AI Foundry, así que no se acumulan copias con cada ejecución.
 
 ---
 
-## 📚 Additional Resources
+## 💼 ¿Y esto para qué sirve en el mundo real?
 
-### Documentation
+El esqueleto que montan los cuatro proyectos —**coordinador + especialistas + herramientas por MCP + aprobación humana**— es el patrón que se usa en producción. Cambia el servidor MCP y cambias de dominio, sin tocar la arquitectura:
 
-- [Azure AI Foundry Agents](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Azure AI Projects SDK](https://learn.microsoft.com/en-us/python/api/azure-ai-projects/)
+| Cambia esto… | …y tienes |
+|---|---|
+| MCP de clima → MCP de tu **ERP** | Un analista que consulta cifras reales en vez de inventarlas |
+| MCP de archivos → MCP de **SharePoint / S3** | Un agente que genera informes donde de verdad los lee la gente |
+| MCP de Microsoft Learn → MCP de tu **base de conocimiento interna** | Un asistente que responde con las políticas *de tu empresa* |
+| Añadir herramientas de **escritura** (crear, borrar, enviar) | Aquí la aprobación deja de ser un detalle didáctico y pasa a ser tu red de seguridad |
 
-### Examples
-
-- [Microsoft Learn MCP Server](https://github.com/microsoftdocs/mcp)
-- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-
----
-
-## 🤝 Contributing
-
-This is a demonstration repository. Suggestions and improvements welcome!
+**Por qué varios agentes y no uno solo:** instrucciones más cortas (menos errores), permisos por rol (solo el Investigador toca la documentación), piezas sustituibles (puedes abaratar el modelo del Ejecutor sin tocar el resto) y trazabilidad (cada mensaje A2A es un registro auditable de quién pidió qué a quién).
 
 ---
 
-## 📝 License
+## 📁 Estructura del bloque
 
-This project is for educational and demonstration purposes.
+```
+A2A & MCP/
+├── README.md                          ← este archivo (mapa general)
+│
+├── scenario1_local_agents/            🐍 Python · local
+│   ├── agents/                        3 agentes
+│   ├── mcp_servers/                   2 servidores MCP propios
+│   ├── run_scenario1.py               orquestador + interfaz interactiva
+│   └── README.md
+│
+├── scenario1_local_agents_CSharp/     #️⃣ C# · local
+│   ├── Scenario1.Host/                agentes + orquestador
+│   ├── McpServers/                    2 servidores MCP (proyectos ejecutables)
+│   └── README.md
+│
+├── scenario2_azure_foundry/           🐍 Python · Azure AI Foundry
+│   ├── interactive_maf_demo.py        todo el ejercicio, en 9 capas comentadas
+│   └── README.md
+│
+└── scenario2_azure_foundry_CSharp/    #️⃣ C# · Azure AI Foundry
+    ├── Scenario2.Host/                las mismas 9 capas, un archivo por capa
+    └── README.md
+```
 
 ---
 
-## 🎯 Next Steps
+## 🧰 Tecnologías
 
-1. **Run Scenario 1** to understand the fundamentals
-2. **Run Scenario 2** to see cloud implementation
-3. **Experiment** with both to find what works for your use case
-4. **Extend** by adding new agents, MCP servers, or tools
+| Pieza | Python | C# / .NET |
+|---|---|---|
+| Núcleo del framework | `agent-framework-core` | `Microsoft.Agents.AI` |
+| Azure OpenAI (escenario 1) | `agent-framework-openai` | `Microsoft.Agents.AI.OpenAI` + `Azure.AI.OpenAI` |
+| Azure AI Foundry (escenario 2) | `agent-framework-foundry` | `Microsoft.Agents.AI.Foundry` |
+| Protocolo MCP | `mcp` | `ModelContextProtocol` |
+| Identidad de Azure | `azure-identity` | `Azure.Identity` |
+| Configuración | `python-dotenv` | `Microsoft.Extensions.Configuration` |
 
-**Ready to build multi-agent systems! 🚀**
+Las versiones exactas, siempre **fijadas**, están en el `requirements.txt` / `.csproj` de cada proyecto.
 
+---
+
+## 📖 Conceptos, en una tarjeta cada uno
+
+**Agente** — Modelo de lenguaje + instrucciones + herramientas + memoria. El modelo decide; el framework ejecuta.
+
+**ChatClient / cliente del proyecto** — El "motor": sabe hablar con el proveedor del modelo, y nada más. No tiene personalidad. Varios agentes pueden compartirlo.
+
+**Sesión (o hilo)** — El historial de conversación de un agente. Es lo que le hace recordar los turnos anteriores.
+
+**Herramienta MCP** — Una función que el servidor publica y el modelo puede decidir llamar. El cliente la **descubre** al conectarse; nadie escribe su firma a mano.
+
+**Transporte MCP** — El cable: `stdio` (proceso local) o `HTTP en streaming` (servidor remoto). El protocolo es el mismo en los dos casos.
+
+**Mensaje A2A** — El "sobre" que un agente envía a otro: emisor, destinatario, tipo y carga útil. Los cuatro campos que necesita cualquier protocolo agente-a-agente.
+
+**Aprobación de herramientas** — El framework detiene la ejecución y devuelve una solicitud; hasta que un humano no responde, la herramienta no se ejecuta.
+
+**Agente efímero** — Vive en memoria durante la ejecución y no queda registrado en ningún servicio.
+
+---
+
+## 📚 Recursos
+
+- [Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/) — documentación oficial
+- [Model Context Protocol](https://modelcontextprotocol.io/) — la especificación
+- [Servidor MCP de Microsoft Learn](https://github.com/microsoftdocs/mcp) — el que usa el escenario 2
+- [SDK de MCP para Python](https://github.com/modelcontextprotocol/python-sdk) · [para C#](https://github.com/modelcontextprotocol/csharp-sdk)
+- [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/) — el servicio del escenario 2
+
+---
+
+### ✍️ Autoría
+
+Material didáctico del bloque **A2A & MCP**, cuarto de la serie sobre Microsoft Agent Framework,
+junto a `Part-1/` (fundamentos), `Part-2/` (transversales) y `Part-3/` (workflows).
+
+Fernando Valdés H.
