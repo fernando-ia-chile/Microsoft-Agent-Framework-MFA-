@@ -1,0 +1,23 @@
+# Ignorar todos los archivos Markdown
+CLAUDE.md
+env.md
+Memory.md
+.claude
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales
+venv/
+.venv/
+.env/
+.env
+
+# Artefactos que genera la demo al ejecutarse
+agents_info_interactive.json
+
+# Archivos de IDE
+.vscode/
+.idea/

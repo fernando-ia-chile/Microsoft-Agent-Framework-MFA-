@@ -11,9 +11,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Cuarto bloque de la serie, junto a `Part-1/` (fundamentos), `Part-2/` (transversales) y `Part-3/` (workflows). Este bloque cubre **A2A (Agent-to-Agent) + MCP** mediante dos escenarios independientes que resuelven lo mismo de dos formas:
 
 - **`scenario1_local_agents/`** — tres agentes Python locales (Research, Coordinator, Executor) + dos servidores MCP locales (clima, ficheros).
-- **`scenario2_azure_foundry/`** — tres agentes alojados en Azure AI Foundry Agent Service + el MCP remoto de Microsoft Learn.
+- **`scenario2_azure_foundry/`** — tres agentes sobre Azure AI Foundry + el MCP remoto de Microsoft Learn, con aprobación humana de cada llamada a herramienta. Tras la migración los agentes son **efímeros** (ya no se registran en el Agent Service).
 
-Los dos escenarios **no comparten código, ni `requirements.txt`, ni `.env`**. Se desarrollan por separado.
+Cada escenario tiene además su **gemelo en C#/.NET 10**: `scenario1_local_agents_CSharp/` y `scenario2_azure_foundry_CSharp/`.
+
+Los cuatro proyectos **no comparten código, ni `requirements.txt`/`.csproj`, ni configuración**. Se desarrollan por separado.
+
+### Escenario 2 en C# — ejecutar
+
+```powershell
+cd "scenario2_azure_foundry_CSharp"
+az login
+dotnet run --project Scenario2.Host
+```
+
+Réplica fiel del Python migrado: mismas 9 capas, mismos 7 pasos, mismos textos. Paquetes: `Microsoft.Agents.AI` **1.15.0**, `Microsoft.Agents.AI.Foundry` **1.5.0** (su rama 1.15 solo existe en *preview*), `ModelContextProtocol` **1.4.1**, `Azure.Identity` **1.21.0** (⚠️ menos da error NU1605 por degradación). `appsettings.json` usa **las mismas claves que el `.env`** y se versiona con placeholders `<…>`; los valores reales van en `appsettings.Development.json` (en `.gitignore`).
+
+Equivalencias clave: `FoundryChatClient` + `Agent` → `new AIProjectClient(...)` + `proyecto.AsAIAgent(model:…, instructions:…)` (⚠️ la sobrecarga con `model` devuelve un agente **efímero**; las que reciben `AgentReference`/`ProjectsAgentRecord` devuelven un `FoundryAgent` **persistente**); `MCPStreamableHTTPTool` → `HttpClientTransport` + `McpClient.CreateAsync`; `approval_mode="always_require"` → `new ApprovalRequiredAIFunction(tool)`; `user_input_requests` → `Contents.OfType<ToolApprovalRequestContent>()`.
 
 ## 🚨 Punto de partida: aquí NO se usa `agent_framework` en absoluto
 
@@ -26,7 +40,7 @@ Por tanto la migración aquí **no** es "API vieja de `agent_framework` → API 
 | Ubicación | Estado |
 |---|---|
 | `scenario1_local_agents/.venv` | Python 3.14.2. **Stack MFA instalado el 2026-07-22** (estaba vacío, solo `pip`). |
-| `scenario2_azure_foundry/` | **Sin venv.** |
+| `scenario2_azure_foundry/.venv` | Python 3.14.2. **Stack MFA instalado el 2026-07-23** (estaba vacío, solo `pip`). |
 
 Las versiones de referencia salen del venv ya migrado de Part-1: `agent-framework-core` **1.11.0**, `agent-framework-foundry` 1.10.1, `agent-framework-openai` 1.10.1, `agent-framework-a2a` 1.0.0b260212, `a2a-sdk` 1.1.0, `mcp` 1.28.1, `httpx` 0.28.1, `openai` 2.45.0, `pydantic` 2.13.4.
 
@@ -44,9 +58,13 @@ Stack **ya instalado** en `scenario1_local_agents/.venv` (2026-07-22): core **1.
 | `scenario1/mcp_servers/weather_server.py` | Servidor MCP: clima vía Open-Meteo | ✅ **Migrado al SDK MCP 1.28.1 y probado** |
 | `scenario1/mcp_servers/file_operations_server.py` | Servidor MCP: operaciones de fichero | ✅ **Migrado al SDK MCP 1.28.1 y probado** |
 | `scenario1/run_scenario1.py` | Orquestador + UI interactiva | ✅ **Migrado y probado end-to-end** |
-| `scenario2/interactive_maf_demo.py` | Agentes Foundry + MCP Microsoft Learn | ⏳ Pendiente |
+| `scenario2/interactive_maf_demo.py` | Agentes Foundry + MCP Microsoft Learn | ✅ **Migrado y probado end-to-end** (2026-07-23) |
 
 🎉 **Escenario 1 completo**: los 6 componentes migrados y probados. Ejecutar con `python run_scenario1.py`; comandos del bucle: `ciudades`, `demo`, `a2a`, `a2a-directo`, `arquitectura`, `ayuda`, `salir`.
+
+🎉 **Escenario 2 completo**: reescrito sobre MFA en 9 capas con SOLID (ver [Memory.md](Memory.md)). Stack instalado en su venv: core **1.12.1**, foundry **1.10.3**, mcp 1.28.1, azure-identity 1.25.3, python-dotenv 1.2.2. Tiene [README.md](scenario2_azure_foundry/README.md) propio.
+
+🎉 **Réplicas en C#** (.NET 10, `Microsoft.Agents.AI` 1.15.0) de **los dos escenarios**: `scenario1_local_agents_CSharp/` y `scenario2_azure_foundry_CSharp/`. Ambas con README propio y probadas end-to-end.
 
 **Contrato que respeta la migración:** los componentes migrados conservan `handle_message(dict) -> dict` y `process_research_request(dict) -> dict` con la misma forma de mensaje A2A, para no romper a los que aún no se han migrado.
 
@@ -174,21 +192,36 @@ python run_scenario1.py
 
 ```powershell
 cd "scenario2_azure_foundry"
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt   # la primera vez
 az login
 python interactive_maf_demo.py
 ```
 
-Autentica con `DefaultAzureCredential` → **requiere `az login`**. Este escenario **sí llama a modelos de verdad**: consume cuota y no es determinista.
+Autentica con `DefaultAzureCredential` (versión **async**, `azure.identity.aio`) → **requiere `az login`**. Este escenario **sí llama a modelos de verdad**: consume cuota y no es determinista.
 
-Variables de [.env](scenario2_azure_foundry/.env): `AZURE_AI_PROJECT_ENDPOINT` (o se compone desde `AZURE_AI_FOUNDRY_ENDPOINT` + `AZURE_AI_FOUNDRY_PROJECT`) y `AZURE_OPENAI_DEPLOYMENT_NAME`, que aquí nombra el **modelo de Foundry**, no un deployment de Azure OpenAI. La URL del MCP de Microsoft Learn (`https://learn.microsoft.com/api/mcp`) está **hardcodeada**, no se lee de `MCP_MS_LEARN_SERVER_URL`.
+Variables de [.env](scenario2_azure_foundry/.env) (plantilla en [.env.example](scenario2_azure_foundry/.env.example)): `AZURE_AI_PROJECT_ENDPOINT` (o se compone desde `AZURE_AI_FOUNDRY_ENDPOINT` + `AZURE_AI_FOUNDRY_PROJECT`) y `AZURE_OPENAI_DEPLOYMENT_NAME`, que aquí nombra el **modelo de Foundry**, no un deployment de Azure OpenAI. **No hace falta ninguna clave de API.** La URL del MCP de Microsoft Learn sigue siendo una constante del módulo (`URL_MCP_MICROSOFT_LEARN`), no se lee de `MCP_MS_LEARN_SERVER_URL`.
 
-### Trampas del escenario 2
+### Estructura del archivo migrado (9 capas)
 
-- 🚨 **Los agentes creados son persistentes y NUNCA se borran.** Cada ejecución crea `research-agent-interactive`, `executor-agent-interactive` y `coordinator-agent-interactive` en el proyecto de Foundry. No hay `cleanup`: **se acumulan**. Al migrar a `Agent(client, …)` pasan a ser efímeros y el problema desaparece.
-- ⚠️ **La orquestación la hace el script, no el Coordinator.** Se crea el thread del coordinador y se lanza su run… pero `run_coord` **nunca se consulta** ([interactive_maf_demo.py:363](scenario2_azure_foundry/interactive_maf_demo.py#L363)): su respuesta se descarta. Los pasos 2–7 son threads separados que el Python encadena a mano. El "A2A" es la narración, no el mecanismo.
-- ⚠️ **La aprobación de tools MCP se hace por REST crudo** (`submit_tool_approvals` → `POST .../submit_tool_outputs?api-version=v1` con `requests` y un token de `https://ai.azure.com/.default`), porque el SDK no la exponía. Por eso `requests` está en `requirements.txt`. Además, la extracción de `tool_calls` desde `required_action` prueba **tres métodos** en cascada, incluido `required_action._data` (atributo privado). Todo esto lo reemplaza el kwarg `approval_mode` de las tools MCP de MFA.
-- ⚠️ Los `import` de `RequiredMcpToolCall` y `SubmitToolApprovalAction` están envueltos en `try/except` anidados y pueden acabar en `None`. No asumas que existen.
-- El script detecta modo no interactivo con `sys.stdin.isatty()` y auto-avanza con `time.sleep(2)`; en Windows fuerza UTF-8 reenvolviendo `sys.stdout`. Escribe `agents_info_interactive.json` en el **cwd**.
+`Configuracion` → `Consola` → contrato A2A (`MensajeA2A` / `RespuestaA2A` / `TipoMensaje`) → `PoliticaDeAprobacion` (+ `AprobacionInteractiva` / `AprobacionAutomatica`) → `AgenteA2A` base + `AgenteInvestigacion` / `AgenteEjecutor` / `AgenteCoordinador` → `RedA2A` → `FabricaDeAgentes` → `DemostracionA2A` → `main()`.
+
+Reglas de diseño que hay que respetar al tocarlo:
+- **Solo `Consola` imprime.** Los agentes reciben la consola inyectada; no llamar a `print()` desde ellos.
+- **Solo `Configuracion` lee el entorno.** No volver a llamar a `os.getenv()` fuera de ahí.
+- **Añadir un agente = heredar de `AgenteA2A` + `red.registrar(...)`.** Nada de `if` por nombre de agente.
+- **El bucle de aprobación vive en `AgenteA2A._conversar()`**, compartido por los tres agentes.
+
+### Trampas del escenario 2 (resueltas en la migración)
+
+- ✅ ~~Los agentes creados son persistentes y NUNCA se borran~~ — **resuelto**: `Agent(cliente, …)` crea agentes **efímeros**; no se registra nada en Foundry. Verificado listando los agentes del proyecto tras varias ejecuciones.
+- ✅ ~~`run_coord` nunca se consulta~~ — **resuelto**: el Coordinador interviene dos veces y **su respuesta se usa** (paso 1, redacta el encargo; paso 7, redacta la respuesta final).
+- ✅ ~~Aprobación de tools MCP por REST crudo~~ — **resuelto**: `approval_mode="always_require"` + `respuesta.user_input_requests` + `to_function_approval_response(bool)`. Se eliminaron `requests`, los `try/except` anidados de imports y el acceso a `required_action._data`.
+- ✅ ~~`agents_info_interactive.json` en el cwd~~ — **resuelto**: se ancla a `Path(__file__).resolve().parent`.
+- ⚠️ **La coreografía de los 7 pasos sigue siendo del guion (`DemostracionA2A`), no del modelo.** Es deliberado: el escenario 1 ya enseña la variante donde el modelo decide con *function tools*; aquí se busca ver la mecánica paso a paso.
+- 🚨 **API cambiada en core 1.12.1:** `agent.get_new_thread()` **ya no existe** → `agent.create_session()`, y el kwarg pasa de `thread=` a `session=`.
+- 🚨 **`azure-ai-projects` 2.3.0** reorganizó su API: `client.agents.list_agents()` → `client.agents.list()`. La demo ya no usa ese SDK, pero los scripts de inspección sí.
+- El modo automático se detecta con `sys.stdin.isatty()`; entonces la aprobación pasa a ser `AprobacionAutomatica` (deja constancia en pantalla).
 
 ## Configuración y credenciales
 
@@ -198,4 +231,6 @@ Variables de [.env](scenario2_azure_foundry/.env): `AZURE_AI_PROJECT_ENDPOINT` (
 
 ## Nota sobre secretos / env
 
-**Los dos `.env` están versionados en git** y no hay `.gitignore` en el repositorio (mismo problema que en Part-1 y Part-3). Los valores de Azure son placeholders cortos, pero `RENDER_API_KEY` en `scenario2_azure_foundry/.env` tiene pinta de valor real. No añadas secretos nuevos a estos archivos, y ten en cuenta que cualquier edición aparecerá en `git status`.
+Los tres subproyectos ya tienen `.gitignore` propio, y el del escenario 2 (creado el 2026-07-23) ignora su `.env`. ⚠️ **Pero `.gitignore` no destraquea lo ya versionado**: `scenario2_azure_foundry/.env` **sigue estando en el índice de git** y aparece como modificado en `git status`. Para sacarlo hace falta `git rm --cached scenario2_azure_foundry/.env`.
+
+⚠️ Ese `.env` ha contenido valores **reales** (clave de Foundry y `RENDER_API_KEY`) y están en el historial del repositorio: dejar de versionar el archivo no los des-expone. No añadas secretos nuevos a estos archivos; usa [.env.example](scenario2_azure_foundry/.env.example) como plantilla.

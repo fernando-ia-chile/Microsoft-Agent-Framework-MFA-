@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Scenario2.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Copia appsettings.json junto al ejecutable (equivale al .env de Python). -->
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Opcional: tus valores reales. Está en .gitignore. -->
+    <None Update="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('appsettings.Development.json')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      ⚙️ MFA: núcleo del Microsoft Agent Framework (equivale a agent-framework-core).
+    -->
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.15.0" />
+
+    <!--
+      ⚙️ MFA: soporte de Azure AI Foundry (equivale a agent-framework-foundry).
+      Aporta la extensión AIProjectClient.AsAIAgent(...), que es el equivalente
+      exacto de FoundryChatClient + Agent en Python.
+    -->
+    <PackageReference Include="Microsoft.Agents.AI.Foundry" Version="1.5.0" />
+
+    <!--
+      🔌 MCP: SDK del Model Context Protocol (equivale al paquete `mcp` de Python).
+      Aquí se usa el transporte HTTP, no el stdio del escenario 1.
+    -->
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+
+    <!--
+      🔐 Autenticación con tu identidad de Azure (equivale a azure-identity).
+      NO hay clave de API en ninguna parte: se usa DefaultAzureCredential.
+    -->
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+
+    <!--
+      🔧 Infra: configuración por archivos + variables de entorno.
+      Es el equivalente de python-dotenv; aquí el .env se llama appsettings.json.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.10" />
+  </ItemGroup>
+
+</Project>

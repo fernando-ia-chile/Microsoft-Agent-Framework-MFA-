@@ -15,6 +15,122 @@ Se registra TODO: cambios de código, cambios de dependencias y decisiones relev
 
 ---
 
+## 2026-07-23 — `scenario2_azure_foundry_CSharp/`: réplica completa del escenario 2 en C# ✅
+
+**Cambio:** proyecto **nuevo**: el escenario 2 reimplementado en C#/.NET 10, réplica fiel del `interactive_maf_demo.py` recién migrado — mismas 9 capas, mismos 7 pasos, mismos textos, mismos comentarios numerados y mismos principios SOLID.
+
+**Estructura** (solución con **un** proyecto; aquí no hay servidores MCP propios, el MCP es remoto):
+- `Scenario2.Host` — `Program.cs` (arranque + ficha JSON + cierre), `Configuracion.cs`, `Consola.cs`, `A2A/MensajeA2A.cs` (contrato + `IAgenteA2A`), `A2A/RedA2A.cs`, `Aprobacion/PoliticasDeAprobacion.cs`, `Agents/` (base + los tres agentes), `FabricaDeAgentes.cs` y `DemostracionA2A.cs`.
+
+**Equivalencias de librerías** (buscadas en NuGet):
+
+| Python | C# / .NET |
+|---|---|
+| `agent-framework-core` 1.12.1 | **`Microsoft.Agents.AI` 1.15.0** |
+| `agent-framework-foundry` 1.10.3 | **`Microsoft.Agents.AI.Foundry` 1.5.0** |
+| `mcp` 1.28.1 | **`ModelContextProtocol` 1.4.1** |
+| `azure-identity` 1.25.3 | **`Azure.Identity` 1.21.0** |
+| `python-dotenv` + `.env` | **`Microsoft.Extensions.Configuration`** + `appsettings.json` |
+| `dataclass(frozen=True)` | `sealed record` |
+| `Protocol` (typing) | `interface` |
+
+**Equivalencias de API** (verificadas por reflexión sobre los ensamblados, no por documentación):
+
+| Python | C# |
+|---|---|
+| `FoundryChatClient(project_endpoint=…, model=…, credential=…)` | `new AIProjectClient(new Uri(…), new DefaultAzureCredential())` |
+| `Agent(cliente, name=…, instructions=…, tools=[…])` | `proyecto.AsAIAgent(model:…, name:…, instructions:…, tools:…)` — extensión de `Azure.AI.Projects`, devuelve `ChatClientAgent` **efímero** |
+| `agente.create_session()` / `session=` | `await agente.CreateSessionAsync()` / `sesion` |
+| `agente.run(x, stream=True)` | `agente.RunStreamingAsync(x, sesion)` |
+| `MCPStreamableHTTPTool(name=…, url=…)` | `new HttpClientTransport(new HttpClientTransportOptions{…})` + `McpClient.CreateAsync` |
+| `herramienta.functions` | `await cliente.ListToolsAsync()` |
+| **`approval_mode="always_require"`** | **`new ApprovalRequiredAIFunction(herramienta)`** — envolver cada tool |
+| `respuesta.user_input_requests` | `actualizacion.Contents.OfType<ToolApprovalRequestContent>()` |
+| `solicitud.to_function_approval_response(bool)` | `solicitud.CreateResponse(bool)` |
+| `not sys.stdin.isatty()` | `Console.IsInputRedirected` |
+| `sys.stdout.reconfigure(encoding="utf-8")` | `Console.OutputEncoding = Encoding.UTF8` |
+
+**Mejora que aporta C#:** igual que en el escenario 1, el contrato A2A pasa de convención a **interfaz `IAgenteA2A`** (el compilador exige `AtenderAsync`, `TiposAdmitidos`, `Ficha`), y los mensajes dejan de ser diccionarios sueltos para ser los `record` inmutables `MensajeA2A` / `RespuestaA2A`. La política de aprobación es `IPoliticaDeAprobacion`, no un *Protocol* implícito.
+
+**Notas y hallazgos:**
+- 🔑 **El equivalente de `FoundryChatClient` en .NET no es una clase, es una extensión**: `AzureAIProjectChatClientExtensions.AsAIAgent(...)`, que llega en `Microsoft.Agents.AI.Foundry` pero se importa desde el namespace `Azure.AI.Projects`. Hay dos familias de sobrecargas: las que reciben `AgentReference`/`ProjectsAgentRecord` devuelven `FoundryAgent` (**persistente**, registrado en el servicio) y la que recibe `model` + `instructions` devuelve `ChatClientAgent` (**efímero**). Se usa la segunda: es la que replica el comportamiento del Python migrado.
+- ⚠️ **Versiones desalineadas a propósito**: `Microsoft.Agents.AI` va por 1.15.0 pero `Microsoft.Agents.AI.Foundry` estable va por **1.5.0** (su rama 1.15 solo existe como *preview* y arrastra `Azure.AI.Projects` beta). Se eligió la combinación **todo estable**; NuGet resuelve sin conflicto porque Foundry pide `Microsoft.Agents.AI >= 1.5.0`.
+- 🐞 **Trampa NU1605**: fijar `Azure.Identity` 1.17.1 rompe la compilación — `Microsoft.Agents.AI.Foundry` exige **>= 1.21.0** y NuGet trata la degradación como error. Subido a 1.21.0.
+- 🐞 **`ListToolsAsync()` devuelve `IList<McpClientTool>`**, no `IReadOnlyList`; hace falta `[.. herramientas]` para adaptarlo.
+- 🐞 **`File.WriteAllText(..., Encoding.UTF8)` escribe BOM.** El JSON salía con un carácter invisible al principio. Corregido con `new UTF8Encoding(false)`. Además se aplicó `JsonNamingPolicy.SnakeCaseLower` para que la ficha salga con las mismas claves que la de Python (`nombre`, `tipos_admitidos`…).
+- 🔧 La ficha `agents_info_interactive.json` se ancla a la **raíz de la solución** (buscando `*.sln`/`*.slnx` hacia arriba), no a `bin/Debug/net10.0`.
+- 🔑 **`appsettings.json` usa las MISMAS claves que el `.env` de Python** (`AZURE_AI_PROJECT_ENDPOINT`, `AZURE_AI_FOUNDRY_ENDPOINT`, `AZURE_AI_FOUNDRY_PROJECT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, `MCP_MS_LEARN_SERVER_URL`), a petición del usuario. Se versiona con placeholders `<…>`; los valores reales van en `appsettings.Development.json` (en `.gitignore`) o en variables de entorno, que mandan.
+- 🎯 **Pequeña mejora sobre Python**: la URL del MCP se lee de `MCP_MS_LEARN_SERVER_URL` (con la constante como valor por defecto); en Python sigue siendo una constante del módulo.
+
+**Pruebas realizadas (contra Azure real, modelo `gpt-5.4-mini`):**
+- ✅ `dotnet build`: **0 errores, 0 advertencias**.
+- ✅ **Flujo completo end-to-end cuatro veces**: **7/7 pasos**, con datos reales y enlaces a Microsoft Learn.
+- ✅ **Descubrimiento MCP por protocolo**: las 3 herramientas de Microsoft Learn (`microsoft_docs_search`, `microsoft_code_sample_search`, `microsoft_docs_fetch`).
+- ✅ **Aprobación de herramientas**: hasta 4 llamadas interceptadas en una ejecución, autorizadas y ejecutadas después. Verificado también el **camino interactivo** (la caja `┌─┐` y el prompt `[S/n]`) instanciando `AprobacionInteractiva` desde un proyecto de prueba.
+- ✅ **Streaming + aprobación en el mismo bucle**: confirmado que las solicitudes llegan como un contenido más dentro del flujo de `RunStreamingAsync`.
+- ✅ **Fallo por configuración incompleta**: quitando `appsettings.Development.json` sale el mensaje guiado en vez de una excepción críptica.
+- ✅ **Verificado que NO se crean agentes persistentes**: el proyecto de Foundry sigue con los 7 agentes preexistentes tras todas las ejecuciones.
+
+**README.md** propio con la misma estructura y nivel de detalle que el de Python (portada con diagrama, "lo elemental en 60 segundos", comparativa escenario 1 vs 2, arquitectura, puesta en marcha, anatomía de una ejecución, aplicabilidad real, las 9 capas + tabla SOLID, problemas comunes, glosario, tecnologías y 6 ejercicios), **más una tabla de equivalencias Python ↔ C#** de librerías y de API. Autoría: Fernando Valdés H.
+
+---
+
+## 2026-07-23 — `scenario2_azure_foundry/interactive_maf_demo.py` migrado a MFA ✅ — 🎉 ESCENARIO 2 COMPLETO
+
+**Cambio:** reescritura completa del único componente del escenario 2. De SDK crudo de Azure (`azure.ai.projects` / `azure.ai.agents`) a **Microsoft Agent Framework**, en español, con arquitectura en 9 capas y comentarios numerados por flujo de ejecución.
+
+**Equivalencias aplicadas:**
+
+| Antes | Ahora |
+|---|---|
+| `AIProjectClient(...)` + `agents_client.create_agent(...)` | `FoundryChatClient(project_endpoint, model, credential)` + `Agent(cliente, name, instructions, tools)` |
+| Agentes **persistentes** creados en cada ejecución | Agentes **efímeros**: no se registra nada en Foundry |
+| `threads.create()` / `messages.create()` / `runs.create()` / bucle de *polling* con `time.sleep(2)` | `agente.create_session()` + `await agente.run(..., stream=True, session=…)` |
+| Herramienta MCP como **diccionario suelto** `{"type": "mcp", "server_url": …}` | `MCPStreamableHTTPTool(name=…, url=…)` — del **core** de MFA |
+| `submit_tool_approvals()`: `POST …/submit_tool_outputs?api-version=v1` con `requests` y token de `https://ai.azure.com/.default` obtenido a mano | kwarg **`approval_mode="always_require"`** + `respuesta.user_input_requests` + `solicitud.to_function_approval_response(bool)` |
+| Extracción de `tool_calls` probando **tres métodos** en cascada, incluido `required_action._data` (atributo privado) | Ya no existe: lo resuelve el framework |
+| `import` de `RequiredMcpToolCall` / `SubmitToolApprovalAction` en `try/except` anidados que podían acabar en `None` | Eliminados |
+| `io.TextIOWrapper(sys.stdout.buffer, …)` | `sys.stdout.reconfigure(encoding="utf-8")` (igual que el escenario 1) |
+| `DefaultAzureCredential` síncrona | `azure.identity.aio.DefaultAzureCredential` dentro de `async with` |
+
+**Arquitectura nueva (SOLID), a petición del usuario** — 9 capas, cada una con una responsabilidad:
+`Configuracion` (SRP: única lectura del `.env`, validación temprana) · `Consola` (SRP+DIP: **nadie más llama a `print()`**; los agentes reciben la consola) · `MensajeA2A`/`RespuestaA2A`/`TipoMensaje` (contrato inmutable, en vez de diccionarios sueltos) · `PoliticaDeAprobacion` + `AprobacionInteractiva`/`AprobacionAutomatica` (OCP+DIP: la decisión de autorizar es una pieza intercambiable) · `AgenteA2A` base abstracta con *método plantilla* `atender()` + `_conversar()` y tres agentes concretos (LSP: intercambiables como destinos A2A; ISP: cada uno publica `tipos_admitidos` y rechaza el resto con error explícito) · `RedA2A` (OCP: registrar un cuarto agente es **una línea**) · `FabricaDeAgentes` · `DemostracionA2A` (el guion de los 7 pasos) · `main()`.
+
+**Esencia preservada** (petición explícita del usuario): las dos fases, los 7 pasos narrados, las cajas `▔▔▔` de mensaje A2A, las pausas con Enter, el modo automático sin TTY y el archivo `agents_info_interactive.json`.
+
+**Motivo:** el escenario 2 era el último componente sin migrar del bloque.
+
+**🐞 Bugs corregidos por el camino:**
+- **`run_coord` ya no se descarta.** Antes se creaba el thread del Coordinador, se lanzaba su run y **nunca se consultaba** (línea 363 del original): su respuesta se tiraba. Ahora el Coordinador interviene de verdad dos veces — al principio redacta el **encargo** que se envía al Agente de Investigación (y ese texto **se usa**), y al final redacta la respuesta para el usuario.
+- **`agents_info_interactive.json` se escribía en el cwd**; ahora se ancla a `Path(__file__).resolve().parent`.
+- **`load_dotenv()` dependía del cwd**; ahora ruta absoluta con `override=True`.
+- **Configuración validada al arrancar**: antes, con el `.env` incompleto, `PROJECT_ENDPOINT` quedaba en `None` y el fallo aparecía mucho más tarde y sin explicación.
+- **Cierre garantizado** de la sesión MCP en un `finally`.
+
+**Notas y hallazgos:**
+- 🚨 **Cambio de API en core 1.12.1**: `agent.get_new_thread()` **ya no existe**; ahora es `agent.create_session()` y el kwarg pasa de `thread=` a `session=`. Descubierto por `AttributeError` en la prueba de humo.
+- ⚙️ **Patrón de aprobación verificado**: `flujo = agente.run(x, stream=True, session=s)` → `async for` sobre el flujo → `await flujo.get_final_response()` → si `user_input_requests` no está vacío, se vuelve a llamar a `run()` pasándole la lista de `to_function_approval_response(bool)`. Se hace en bucle acotado (`MAXIMO_RONDAS = 6`).
+- 🔌 **El MCP de Microsoft Learn publica 3 herramientas**, no 2 como decían las instrucciones del agente original: `microsoft_docs_search`, `microsoft_code_sample_search` y `microsoft_docs_fetch`. Ahora se listan por descubrimiento (`.functions`), no a mano.
+- ✅ **Verificado que NO se crean agentes persistentes**: listados los agentes del proyecto tras varias ejecuciones → los 7 que ya había (`PruebaIndex`, `DemoAssistant`, `fnd2016-agent`, `analista-antecedentes-tecnicos`, `aiep-rag-knowledge-workflow`, `seguridad-y-Cumplimiento`, `soluciones-troubleshooting`), ninguno de la demo. **La acumulación de agentes queda resuelta.**
+- ⚠️ **Decisión de diseño:** la coreografía de los 7 pasos la sigue marcando el guion (`DemostracionA2A`), no el modelo. Es deliberado y está documentado: el escenario 1 ya enseña la versión donde el modelo decide con *function tools*; aquí el objetivo es ver **la mecánica paso a paso**. El README compara ambos enfoques.
+- ⚠️ `azure-ai-projects` subió a **2.3.0** y reorganizó la API: `client.agents.list_agents()` ya no existe, ahora es `client.agents.list()`. Solo afecta a scripts de inspección, no a la demo (que no usa ese SDK).
+
+**Dependencias:** venv del escenario creado e instalado desde cero (estaba vacío, solo `pip`). [requirements.txt](scenario2_azure_foundry/requirements.txt) reescrito y pinneado: `agent-framework-core` **1.12.1** (una versión por delante del escenario 1), `agent-framework-foundry` **1.10.3**, `mcp` **1.28.1**, `azure-identity` **1.25.3**, `python-dotenv` **1.2.2**. Por arrastre: `agent-framework-openai` 1.11.0, `azure-ai-projects` 2.3.0, `openai` 2.48.0, `pydantic` 2.13.4, `httpx` 0.28.1. **Eliminadas** `azure-ai-agents` y `requests` (esta última solo existía para la aprobación por REST). Instalación limpia, sin conflictos.
+
+**Pruebas realizadas (contra Azure real, modelo `gpt-5.4-mini`):**
+- ✅ **Flujo completo end-to-end tres veces.** Pregunta por defecto (*"¿Qué niveles de servicio admiten servidores MCP en Azure API Management?"*) → **7/7 pasos**, con datos reales y enlaces a Microsoft Learn.
+- ✅ **Descubrimiento MCP por protocolo**: las 3 herramientas del servidor de Microsoft Learn.
+- ✅ **Aprobación de herramientas**: 4 llamadas interceptadas en una ejecución (3 × `microsoft_docs_search` + 1 × `microsoft_docs_fetch`), todas autorizadas y ejecutadas después.
+- ✅ **Ruta de aprobación interactiva** probada por separado (la caja `┌─┐` y el prompt `[S/n]`).
+- ✅ **Modo automático sin TTY**: la demo avanza sola y aprueba automáticamente, dejando constancia en pantalla.
+- ✅ **Ficha JSON** generada en el directorio del script, con los tres agentes marcados como efímeros.
+
+**Documentación:** [README.md](scenario2_azure_foundry/README.md) nuevo (no existía), con la misma estructura que el del escenario 1: portada con diagrama, "lo elemental en 60 segundos", **tabla comparativa escenario 1 vs escenario 2**, arquitectura, puesta en marcha, anatomía de una ejecución, aplicabilidad real, **las 9 capas + tabla de dónde está cada principio SOLID**, problemas comunes, glosario, tecnologías y 6 ejercicios propuestos. Autoría: Fernando Valdés H.
+
+**Pendiente:** el usuario creó [.gitignore](scenario2_azure_foundry/.gitignore) y [.env.example](scenario2_azure_foundry/.env.example) durante la sesión (se les añadieron `.venv/` y el JSON generado). ⚠️ **El `.env` sigue estando TRACKEADO en git**: `.gitignore` no destraquea lo ya versionado, hace falta `git rm --cached scenario2_azure_foundry/.env`. Las claves que contiene (Foundry y Render) han estado en el historial del repositorio.
+
+---
+
 ## 2026-07-23 — `scenario1_local_agents_CSharp/`: réplica completa del escenario 1 en C# ✅
 
 **Cambio:** proyecto **nuevo** (no una migración): todo el escenario 1 reimplementado en C#/.NET 10, con la misma arquitectura, los mismos conceptos y el mismo estilo didáctico que el gemelo en Python.

@@ -1,10 +1,31 @@
-# Azure AI Foundry SDK
-azure-ai-projects>=1.0.0
-azure-ai-agents>=1.0.0
-azure-identity>=1.12.0
-azure-core>=1.28.0
+# ==============================================================================
+# Escenario 2 — Agentes en Azure AI Foundry + MCP de Microsoft Learn
+# Versiones PINNEADAS y verificadas el 2026-07-23 (últimas publicadas en PyPI).
+# ==============================================================================
+#
+# 🚨 NO instalar el meta-paquete `agent-framework`: arrastra
+#    `agent-framework-azure-ai` en versión rc, incompatible con el core actual.
+#    Aquí se instalan solo los subpaquetes concretos que se usan.
 
-# Utilities
-python-dotenv>=1.0.0
-requests>=2.31.0
+# --- Microsoft Agent Framework ------------------------------------------------
+agent-framework-core==1.12.1        # Agent, MCPStreamableHTTPTool (MCP vive en el core)
+agent-framework-foundry==1.10.3     # FoundryChatClient: el motor sobre Azure AI Foundry
 
+# --- Protocolo MCP ------------------------------------------------------------
+mcp==1.28.1                         # SDK del Model Context Protocol (cliente HTTP)
+
+# --- Autenticación en Azure ---------------------------------------------------
+azure-identity==1.25.3              # DefaultAzureCredential → requiere `az login`
+
+# --- Utilidades ---------------------------------------------------------------
+python-dotenv==1.2.2                # carga del .env
+
+# ------------------------------------------------------------------------------
+# Llegan por arrastre (no hace falta declararlas, se listan como referencia):
+#   agent-framework-openai==1.11.0   azure-ai-projects==2.3.0   azure-core==1.41.0
+#   openai==2.48.0                   pydantic==2.13.4           httpx==0.28.1
+#
+# ⚠️ Ya NO se necesitan las del ejercicio original:
+#   azure-ai-agents  → lo sustituye `Agent` de MFA (agentes efímeros)
+#   requests         → la aprobación de herramientas MCP se hacía por REST a mano;
+#                      ahora es el kwarg `approval_mode` de la propia herramienta.

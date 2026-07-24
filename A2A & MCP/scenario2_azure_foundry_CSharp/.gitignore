@@ -1,0 +1,21 @@
+# Credenciales y valores reales — NUNCA versionar
+appsettings.Development.json
+.env
+
+# Documentación de trabajo interna
+CLAUDE.md
+env.md
+Memory.md
+.claude
+
+# Compilación de .NET
+bin/
+obj/
+.vs/
+
+# Artefactos que genera la demo al ejecutarse
+agents_info_interactive.json
+
+# Archivos de IDE
+.vscode/
+.idea/
